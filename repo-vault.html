@@ -1,0 +1,1841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RepoVault — GitHub Repo Collection</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>">
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-soft: #161b22;
+    --card: rgba(255, 255, 255, 0.04);
+    --card-border: rgba(255, 255, 255, 0.09);
+    --card-hover: rgba(255, 255, 255, 0.07);
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --accent: #58a6ff;
+    --accent-2: #bc8cff;
+    --green: #3fb950;
+    --danger: #f85149;
+    --gold: #e3b341;
+    --radius: 16px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ambient glow blobs */
+  .glow {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.22;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .glow-1 { width: 500px; height: 500px; background: #1f6feb; top: -180px; left: -120px; }
+  .glow-2 { width: 420px; height: 420px; background: #8957e5; bottom: -150px; right: -100px; }
+  .glow-3 { width: 300px; height: 300px; background: #1a7f37; top: 40%; left: 55%; opacity: 0.12; }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* ---------- header ---------- */
+  header {
+    text-align: center;
+    margin-bottom: 40px;
+    animation: fadeDown 0.6s ease both;
+  }
+
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 10px;
+  }
+
+  .logo-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #1f6feb, #8957e5);
+    display: grid;
+    place-items: center;
+    box-shadow: 0 8px 32px rgba(88, 166, 255, 0.35);
+  }
+  .logo-icon svg { width: 30px; height: 30px; fill: #fff; }
+
+  h1 {
+    font-size: 2.4rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    background: linear-gradient(90deg, #e6edf3, #58a6ff 55%, #bc8cff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .tagline { color: var(--text-dim); font-size: 1.02rem; }
+
+  /* ---------- section tabs (Repos / People) ---------- */
+  .tabs {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 32px;
+    animation: fadeDown 0.6s 0.05s ease both;
+  }
+  .tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 26px;
+    font-size: 0.98rem;
+    font-weight: 600;
+    font-family: inherit;
+    color: var(--text-dim);
+    background: var(--bg-soft);
+    border: 1px solid var(--card-border);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.25s;
+  }
+  .tab-btn:hover { color: var(--text); border-color: var(--accent); }
+  .tab-btn.active {
+    color: #fff;
+    background: linear-gradient(135deg, #1f6feb, #8957e5);
+    border-color: transparent;
+    box-shadow: 0 4px 20px rgba(88, 166, 255, 0.3);
+  }
+  .tab-btn .tab-count {
+    font-size: 0.78rem;
+    padding: 1px 9px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+  }
+  .tab-btn:not(.active) .tab-count { background: var(--card); border: 1px solid var(--card-border); }
+
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* ---------- person card ---------- */
+  .person-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: var(--bg-soft);
+    border: 2px solid var(--card-border);
+    flex-shrink: 0;
+    object-fit: cover;
+    transition: border-color 0.25s;
+  }
+  .card:hover .person-avatar { border-color: var(--accent); }
+
+  .person-login { font-size: 0.82rem; color: var(--accent); }
+  .person-name {
+    font-size: 1.15rem;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .person-stats {
+    display: flex;
+    gap: 10px;
+  }
+  .stat-box {
+    flex: 1;
+    text-align: center;
+    padding: 10px 6px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+  }
+  .stat-box .stat-num { font-size: 1.15rem; font-weight: 700; color: var(--text); }
+  .stat-box .stat-label { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+
+  .delta {
+    font-size: 0.72rem;
+    font-weight: 700;
+    margin-left: 4px;
+  }
+  .delta.up { color: var(--green); }
+  .delta.down { color: var(--danger); }
+
+  .person-bio {
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--text-dim);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 2.6em;
+  }
+
+  .person-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+  .person-meta .meta-item svg { width: 14px; height: 14px; fill: currentColor; }
+
+  .relation-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 11px;
+    border-radius: 999px;
+    text-transform: capitalize;
+  }
+  .relation-badge.me { background: rgba(227, 179, 65, 0.13); color: var(--gold); border: 1px solid rgba(227, 179, 65, 0.4); }
+  .relation-badge.friend { background: rgba(63, 185, 80, 0.13); color: var(--green); border: 1px solid rgba(63, 185, 80, 0.35); }
+
+  /* ---------- "Me" card — premium golden look ---------- */
+  .card.me {
+    background: linear-gradient(160deg, rgba(227, 179, 65, 0.10), rgba(240, 136, 62, 0.04) 55%, rgba(227, 179, 65, 0.07));
+    border-color: rgba(227, 179, 65, 0.45);
+    box-shadow: 0 0 24px rgba(227, 179, 65, 0.08) inset, 0 4px 24px rgba(227, 179, 65, 0.06);
+  }
+  .card.me::before {
+    opacity: 1;
+    background: linear-gradient(90deg, #e3b341, #f0883e, #e3b341);
+  }
+  .card.me:hover {
+    background: linear-gradient(160deg, rgba(227, 179, 65, 0.16), rgba(240, 136, 62, 0.07) 55%, rgba(227, 179, 65, 0.11));
+    border-color: rgba(227, 179, 65, 0.8);
+    box-shadow: 0 0 30px rgba(227, 179, 65, 0.12) inset, 0 14px 40px rgba(227, 179, 65, 0.18);
+  }
+  .card.me .person-avatar { border-color: rgba(227, 179, 65, 0.6); }
+  .card.me:hover .person-avatar { border-color: var(--gold); box-shadow: 0 0 18px rgba(227, 179, 65, 0.35); }
+  .card.me .person-name {
+    background: linear-gradient(90deg, #e3b341, #f8d878, #f0883e);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .card.me .person-login { color: var(--gold); }
+  .card.me .stat-box { border-color: rgba(227, 179, 65, 0.25); background: rgba(227, 179, 65, 0.05); }
+  .card.me .stat-box .stat-num { color: var(--gold); }
+  .card.me .btn-open {
+    background: rgba(227, 179, 65, 0.14);
+    color: var(--gold);
+    border-color: rgba(227, 179, 65, 0.4);
+  }
+  .card.me .btn-open:hover { background: rgba(227, 179, 65, 0.28); }
+  .relation-badge.inspiration { background: rgba(188, 140, 255, 0.13); color: var(--accent-2); border: 1px solid rgba(188, 140, 255, 0.35); }
+  .relation-badge.other { background: rgba(139, 148, 158, 0.13); color: var(--text-dim); border: 1px solid rgba(139, 148, 158, 0.35); }
+
+  /* ---------- add bar ---------- */
+  .add-bar {
+    display: flex;
+    gap: 12px;
+    max-width: 760px;
+    margin: 0 auto 14px;
+    animation: fadeDown 0.6s 0.1s ease both;
+  }
+
+  .input-wrap {
+    flex: 1;
+    position: relative;
+  }
+  .input-wrap svg {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    fill: var(--text-dim);
+    pointer-events: none;
+  }
+
+  #urlInput, #personInput {
+    width: 100%;
+    padding: 16px 18px 16px 48px;
+    font-size: 1rem;
+    color: var(--text);
+    background: var(--bg-soft);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    outline: none;
+    transition: border-color 0.25s, box-shadow 0.25s;
+  }
+  #urlInput::placeholder, #personInput::placeholder { color: #565f6b; }
+  #urlInput:focus, #personInput:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(88, 166, 255, 0.15);
+  }
+
+  #addBtn, #personAddBtn {
+    padding: 0 28px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, #1f6feb, #8957e5);
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform 0.15s, box-shadow 0.25s, opacity 0.2s;
+    box-shadow: 0 4px 20px rgba(88, 166, 255, 0.25);
+    white-space: nowrap;
+  }
+  #addBtn:hover, #personAddBtn:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(88, 166, 255, 0.4); }
+  #addBtn:active, #personAddBtn:active { transform: translateY(0); }
+  #addBtn:disabled, #personAddBtn:disabled { opacity: 0.6; cursor: wait; transform: none; }
+  #addBtn svg, #personAddBtn svg { width: 18px; height: 18px; fill: #fff; }
+
+  .hint {
+    text-align: center;
+    color: #565f6b;
+    font-size: 0.85rem;
+    margin-bottom: 36px;
+    animation: fadeDown 0.6s 0.15s ease both;
+  }
+
+  /* ---------- toolbar ---------- */
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 26px;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+
+  .search-wrap { position: relative; flex: 1; min-width: 220px; }
+  .search-wrap svg {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 17px;
+    height: 17px;
+    fill: var(--text-dim);
+    pointer-events: none;
+  }
+  #searchInput, #personSearchInput {
+    width: 100%;
+    padding: 11px 14px 11px 42px;
+    font-size: 0.95rem;
+    color: var(--text);
+    background: var(--bg-soft);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    outline: none;
+    transition: border-color 0.25s;
+  }
+  #searchInput:focus, #personSearchInput:focus { border-color: var(--accent); }
+  #searchInput::placeholder, #personSearchInput::placeholder { color: #565f6b; }
+
+  select, .tool-btn {
+    padding: 11px 16px;
+    font-size: 0.92rem;
+    color: var(--text);
+    background: var(--bg-soft);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.25s, background 0.25s;
+    font-family: inherit;
+  }
+  select:hover, .tool-btn:hover { border-color: var(--accent); }
+  select option { background: var(--bg-soft); }
+
+  .count-badge {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    padding: 6px 14px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 999px;
+  }
+  .count-badge b { color: var(--accent); }
+
+  /* ---------- grid ---------- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+    gap: 20px;
+  }
+
+  .card {
+    position: relative;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 22px;
+    backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    transition: transform 0.25s ease, border-color 0.25s, background 0.25s, box-shadow 0.25s;
+    animation: cardIn 0.4s ease both;
+    overflow: hidden;
+  }
+  .card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 3px;
+    background: linear-gradient(90deg, #1f6feb, #8957e5);
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+  .card:hover {
+    transform: translateY(-5px);
+    background: var(--card-hover);
+    border-color: rgba(88, 166, 255, 0.4);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
+  }
+  .card:hover::before { opacity: 1; }
+
+  .card-top { display: flex; align-items: center; gap: 12px; }
+
+  .avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 11px;
+    background: var(--bg-soft);
+    border: 1px solid var(--card-border);
+    flex-shrink: 0;
+    object-fit: cover;
+  }
+
+  .repo-names { min-width: 0; }
+  .repo-owner {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .repo-name {
+    font-size: 1.12rem;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .repo-desc {
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: var(--text-dim);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 2.8em;
+  }
+
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+    font-size: 0.83rem;
+    color: var(--text-dim);
+  }
+  .meta-item { display: inline-flex; align-items: center; gap: 5px; }
+  .meta-item svg { width: 15px; height: 15px; fill: currentColor; }
+  .meta-item.stars { color: var(--gold); }
+  .meta-item.forks { color: var(--text-dim); }
+
+  .lang-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  .card-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: auto;
+    padding-top: 4px;
+  }
+
+  .btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border-radius: 11px;
+    border: 1px solid var(--card-border);
+    cursor: pointer;
+    transition: all 0.2s;
+    text-decoration: none;
+    font-family: inherit;
+  }
+  .btn svg { width: 16px; height: 16px; fill: currentColor; }
+
+  .btn-open {
+    background: rgba(88, 166, 255, 0.12);
+    color: var(--accent);
+    border-color: rgba(88, 166, 255, 0.3);
+  }
+  .btn-open:hover { background: rgba(88, 166, 255, 0.25); transform: translateY(-1px); }
+
+  .btn-icon {
+    flex: 0 0 auto;
+    width: 40px;
+    padding: 10px 0;
+    background: transparent;
+    color: var(--text-dim);
+  }
+  .btn-icon:hover { color: var(--text); border-color: var(--text-dim); }
+  .btn-icon.del:hover { color: var(--danger); border-color: var(--danger); background: rgba(248, 81, 73, 0.1); }
+
+  .saved-date {
+    position: absolute;
+    top: 16px;
+    right: 18px;
+    font-size: 0.72rem;
+    color: #565f6b;
+  }
+
+  /* ---------- pinned card ---------- */
+  .card.pinned { border-color: rgba(227, 179, 65, 0.45); }
+  .card.pinned::before {
+    opacity: 1;
+    background: linear-gradient(90deg, #e3b341, #f0883e);
+  }
+
+  .pin-badge {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    font-size: 0.9rem;
+    color: var(--gold);
+  }
+  .card.pinned .saved-date { right: 40px; }
+
+  /* ---------- tags ---------- */
+  .tags-row { display: flex; flex-wrap: wrap; gap: 7px; }
+  .tag {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 3px 11px;
+    border-radius: 999px;
+    background: rgba(88, 166, 255, 0.13);
+    color: var(--accent);
+    border: 1px solid rgba(88, 166, 255, 0.28);
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+  }
+  .tag:hover { background: rgba(88, 166, 255, 0.28); transform: translateY(-1px); }
+  .tag.active-filter {
+    background: var(--accent);
+    color: #0d1117;
+    border-color: var(--accent);
+  }
+
+  /* ---------- note on card ---------- */
+  .repo-note {
+    font-size: 0.84rem;
+    line-height: 1.5;
+    color: #d4a72c;
+    background: rgba(227, 179, 65, 0.08);
+    border-left: 3px solid rgba(227, 179, 65, 0.5);
+    border-radius: 0 8px 8px 0;
+    padding: 8px 12px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    white-space: pre-wrap;
+  }
+
+  /* ---------- modal ---------- */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(1, 4, 9, 0.75);
+    backdrop-filter: blur(6px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    width: 100%;
+    max-width: 520px;
+    background: var(--bg-soft);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+    animation: cardIn 0.25s ease both;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal h3 {
+    font-size: 1.25rem;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .modal .modal-sub { color: var(--text-dim); font-size: 0.88rem; margin-bottom: 22px; }
+
+  .field { margin-bottom: 18px; }
+  .field label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+  .field input[type="text"], .field textarea {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    outline: none;
+    transition: border-color 0.25s;
+    resize: vertical;
+  }
+  .field input:focus, .field textarea:focus { border-color: var(--accent); }
+  .field textarea { min-height: 90px; }
+  .field .field-hint { font-size: 0.78rem; color: #565f6b; margin-top: 6px; }
+
+  .pin-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+    font-size: 0.95rem;
+  }
+  .pin-toggle input { width: 18px; height: 18px; accent-color: var(--gold); cursor: pointer; }
+
+  .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
+  .modal-actions .btn { padding: 12px; }
+  .btn-save {
+    background: linear-gradient(135deg, #1f6feb, #8957e5);
+    color: #fff;
+    border: none;
+  }
+  .btn-save:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(88, 166, 255, 0.35); }
+  .btn-cancel { background: transparent; color: var(--text-dim); }
+  .btn-cancel:hover { color: var(--text); border-color: var(--text-dim); }
+
+
+  .empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 90px 20px;
+    color: var(--text-dim);
+    animation: fadeUp 0.5s ease both;
+  }
+  .empty-icon {
+    font-size: 4rem;
+    margin-bottom: 18px;
+    filter: grayscale(0.3);
+  }
+  .empty h2 { color: var(--text); font-size: 1.4rem; margin-bottom: 8px; font-weight: 700; }
+  .empty p { font-size: 0.98rem; }
+
+  /* ---------- toast ---------- */
+  #toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(90px);
+    background: var(--bg-soft);
+    border: 1px solid var(--card-border);
+    color: var(--text);
+    padding: 13px 26px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.55);
+    transition: transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 90vw;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+  #toast.success { border-color: rgba(63, 185, 80, 0.5); }
+  #toast.error { border-color: rgba(248, 81, 73, 0.5); }
+  #toast .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  #toast.success .dot { background: var(--green); box-shadow: 0 0 10px var(--green); }
+  #toast.error .dot { background: var(--danger); box-shadow: 0 0 10px var(--danger); }
+
+  /* ---------- animations ---------- */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes cardIn {
+    from { opacity: 0; transform: translateY(20px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  @media (max-width: 560px) {
+    .add-bar { flex-direction: column; }
+    #addBtn, #personAddBtn { padding: 14px; justify-content: center; }
+    h1 { font-size: 1.8rem; }
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="glow glow-1"></div>
+<div class="glow glow-2"></div>
+<div class="glow glow-3"></div>
+
+<div class="container">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 16 16"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>
+      </div>
+      <h1>RepoVault</h1>
+    </div>
+    <p class="tagline">Save your favorite GitHub repos in one place ✨</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tabRepos" data-tab="repos">
+      📦 Repos <span class="tab-count" id="tabRepoCount">0</span>
+    </button>
+    <button class="tab-btn" id="tabPeople" data-tab="people">
+      👤 People <span class="tab-count" id="tabPeopleCount">0</span>
+    </button>
+  </div>
+
+  <!-- ================= REPOS SECTION ================= -->
+  <div class="section active" id="reposSection">
+
+  <div class="add-bar">
+    <div class="input-wrap">
+      <svg viewBox="0 0 16 16"><path d="M7.775 3.275a.75.75 0 0 0 1.06 1.06l1.25-1.25a2 2 0 1 1 2.83 2.83l-2.5 2.5a2 2 0 0 1-2.83 0 .75.75 0 0 0-1.06 1.06 3.5 3.5 0 0 0 4.95 0l2.5-2.5a3.5 3.5 0 0 0-4.95-4.95l-1.25 1.25Zm-4.69 9.64a2 2 0 0 1 0-2.83l2.5-2.5a2 2 0 0 1 2.83 0 .75.75 0 0 0 1.06-1.06 3.5 3.5 0 0 0-4.95 0l-2.5 2.5a3.5 3.5 0 0 0 4.95 4.95l1.25-1.25a.75.75 0 0 0-1.06-1.06l-1.25 1.25a2 2 0 0 1-2.83 0Z"/></svg>
+      <input id="urlInput" type="text" placeholder="Paste a GitHub repo URL... (e.g. https://github.com/facebook/react)" autocomplete="off">
+    </div>
+    <button id="addBtn">
+      <svg viewBox="0 0 16 16"><path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2Z"/></svg>
+      Save
+    </button>
+  </div>
+  <p class="hint">Paste one or many URLs (separated by spaces or new lines) and hit Save — details are fetched automatically · Press <b>/</b> to search</p>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg viewBox="0 0 16 16"><path d="M10.68 11.74a6 6 0 0 1-7.922-8.982 6 6 0 0 1 8.982 7.922l3.04 3.04a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215ZM11.5 7a4.499 4.499 0 1 0-8.997 0A4.499 4.499 0 0 0 11.5 7Z"/></svg>
+      <input id="searchInput" type="text" placeholder="Search repos..." autocomplete="off">
+    </div>
+    <select id="langFilter" title="Filter by language">
+      <option value="">All languages</option>
+    </select>
+    <select id="tagFilter" title="Filter by tag">
+      <option value="">All tags</option>
+    </select>
+    <select id="sortBy" title="Sort">
+      <option value="newest">Newest first</option>
+      <option value="oldest">Oldest first</option>
+      <option value="stars">Most stars</option>
+      <option value="name">Name (A–Z)</option>
+    </select>
+    <button class="tool-btn" id="refreshBtn" title="Re-fetch latest stars & info from GitHub">🔄 Refresh</button>
+    <button class="tool-btn" id="tokenBtn" title="Add a GitHub token to raise the API rate limit">🔑 Token</button>
+    <button class="tool-btn" id="exportBtn" title="Download a backup file">⬇ Export</button>
+    <button class="tool-btn" id="importBtn" title="Restore repos from a backup file">⬆ Import</button>
+    <input type="file" id="importFile" accept=".json" hidden>
+    <span class="count-badge"><b id="repoCount">0</b> repos saved</span>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  </div><!-- /reposSection -->
+
+  <!-- ================= PEOPLE SECTION ================= -->
+  <div class="section" id="peopleSection">
+
+    <div class="add-bar">
+      <div class="input-wrap">
+        <svg viewBox="0 0 16 16"><path d="M10.561 8.073a6.005 6.005 0 0 1 3.432 5.142.75.75 0 1 1-1.498.07 4.5 4.5 0 0 0-8.99 0 .75.75 0 0 1-1.498-.07 6.004 6.004 0 0 1 3.431-5.142 3.999 3.999 0 1 1 5.123 0ZM10.5 5a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0Z"/></svg>
+        <input id="personInput" type="text" placeholder="Paste a GitHub profile URL or username... (e.g. torvalds)" autocomplete="off">
+      </div>
+      <button id="personAddBtn">
+        <svg viewBox="0 0 16 16"><path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2Z"/></svg>
+        Add
+      </button>
+    </div>
+    <p class="hint">Add friends & inspiring GitHub users to watch — followers, repos & profile info are fetched automatically · Refresh anytime to see who's growing 📈</p>
+
+    <div class="toolbar">
+      <div class="search-wrap">
+        <svg viewBox="0 0 16 16"><path d="M10.68 11.74a6 6 0 0 1-7.922-8.982 6 6 0 0 1 8.982 7.922l3.04 3.04a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215ZM11.5 7a4.499 4.499 0 1 0-8.997 0A4.499 4.499 0 0 0 11.5 7Z"/></svg>
+        <input id="personSearchInput" type="text" placeholder="Search people..." autocomplete="off">
+      </div>
+      <select id="relationFilter" title="Filter by relation">
+        <option value="">Everyone</option>
+        <option value="me">Me</option>
+        <option value="friend">Friends</option>
+        <option value="inspiration">Inspirations</option>
+        <option value="other">Other</option>
+      </select>
+      <select id="personSortBy" title="Sort">
+        <option value="newest">Newest first</option>
+        <option value="followers">Most followers</option>
+        <option value="growth">Fastest growing</option>
+        <option value="name">Name (A–Z)</option>
+      </select>
+      <button class="tool-btn" id="personRefreshBtn" title="Re-fetch latest profile info from GitHub">🔄 Refresh</button>
+      <span class="count-badge"><b id="personCount">0</b> people</span>
+    </div>
+
+    <div class="grid" id="peopleGrid"></div>
+
+  </div><!-- /peopleSection -->
+</div>
+
+<div id="toast"><span class="dot"></span><span id="toastMsg"></span></div>
+
+<!-- edit modal: tags, note, pin -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h3>✏️ Edit repo</h3>
+    <p class="modal-sub" id="editModalRepo"></p>
+    <div class="field">
+      <label>Tags</label>
+      <input type="text" id="editTags" placeholder="e.g. ai, web-dev, tools" autocomplete="off">
+      <div class="field-hint">Separate tags with commas</div>
+    </div>
+    <div class="field">
+      <label>Personal note</label>
+      <textarea id="editNote" placeholder="Why did you save this repo? e.g. Use this for my portfolio project..."></textarea>
+    </div>
+    <div class="field">
+      <label class="pin-toggle">
+        <input type="checkbox" id="editPin">
+        📌 Pin to top
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" id="editCancel">Cancel</button>
+      <button class="btn btn-save" id="editSave">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- person edit modal: relation, note -->
+<div class="modal-overlay" id="personEditModal">
+  <div class="modal">
+    <h3>✏️ Edit person</h3>
+    <p class="modal-sub" id="personEditModalName"></p>
+    <div class="field">
+      <label>Relation</label>
+      <select id="personEditRelation" style="width:100%; padding:12px 14px; border-radius:12px;">
+        <option value="me">🙋 Me</option>
+        <option value="friend">🤝 Friend</option>
+        <option value="inspiration">⭐ Inspiration</option>
+        <option value="other">👤 Other</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Personal note</label>
+      <textarea id="personEditNote" placeholder="What do you want to learn from them? e.g. Study their open-source projects..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" id="personEditCancel">Cancel</button>
+      <button class="btn btn-save" id="personEditSave">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- token modal: GitHub personal access token for higher rate limit -->
+<div class="modal-overlay" id="tokenModal">
+  <div class="modal">
+    <h3>🔑 GitHub Token</h3>
+    <p class="modal-sub">Without a token GitHub allows only <b>60 requests/hour</b>. With a free token you get <b>5000/hour</b> — no more "rate limit" errors.</p>
+    <div class="field">
+      <label>Personal access token</label>
+      <input type="text" id="tokenInput" placeholder="github_pat_... or ghp_..." autocomplete="off" spellcheck="false">
+      <div class="field-hint">
+        Create one at github.com/settings/tokens → "Generate new token" → no scopes/permissions needed (public data only).
+        The token is stored only in your browser, never sent anywhere except api.github.com.
+      </div>
+    </div>
+    <div class="field" id="tokenStatus" style="font-size:0.88rem; color:var(--text-dim);"></div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" id="tokenRemove" style="color:var(--danger);">Remove token</button>
+      <button class="btn btn-cancel" id="tokenCancel">Cancel</button>
+      <button class="btn btn-save" id="tokenSave">Save token</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(async () => {
+  const STORAGE_KEY = "repovault_repos";
+  const PEOPLE_STORAGE_KEY = "repovault_people";
+  const TOKEN_KEY = "repovault_gh_token";
+  // if the server is running, use the database file; otherwise fall back to browser storage
+  let useServer = location.protocol.startsWith("http");
+
+  // GitHub API helper — adds the personal access token (if saved) to every call.
+  // Without a token: 60 requests/hour. With one: 5000/hour.
+  let ghToken = localStorage.getItem(TOKEN_KEY) || "";
+  function ghFetch(url) {
+    const headers = { Accept: "application/vnd.github+json" };
+    if (ghToken) headers.Authorization = "Bearer " + ghToken;
+    return fetch(url, { headers });
+  }
+
+  // GitHub language colors (common ones)
+  const LANG_COLORS = {
+    JavaScript: "#f1e05a", TypeScript: "#3178c6", Python: "#3572A5", Java: "#b07219",
+    "C++": "#f34b7d", C: "#555555", "C#": "#178600", Go: "#00ADD8", Rust: "#dea584",
+    Ruby: "#701516", PHP: "#4F5D95", Swift: "#F05138", Kotlin: "#A97BFF", Dart: "#00B4AB",
+    HTML: "#e34c26", CSS: "#663399", Shell: "#89e051", Vue: "#41b883", Lua: "#000080",
+    "Jupyter Notebook": "#DA5B0B", R: "#198CE7", Scala: "#c22d40", Haskell: "#5e5086",
+    Elixir: "#6e4a7e", Zig: "#ec915c", Assembly: "#6E4C13", "Objective-C": "#438eff",
+    Perl: "#0298c3", MATLAB: "#e16737", Svelte: "#ff3e00", Solidity: "#AA6746"
+  };
+
+  let repos = [];
+  let people = [];
+
+  const $ = id => document.getElementById(id);
+  const grid = $("grid"), urlInput = $("urlInput"), addBtn = $("addBtn"),
+        searchInput = $("searchInput"), langFilter = $("langFilter"),
+        tagFilter = $("tagFilter"), sortBy = $("sortBy"), repoCount = $("repoCount");
+  const peopleGrid = $("peopleGrid"), personInput = $("personInput"), personAddBtn = $("personAddBtn"),
+        personSearchInput = $("personSearchInput"), relationFilter = $("relationFilter"),
+        personSortBy = $("personSortBy"), personCount = $("personCount");
+
+  function loadLocal() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    catch { return []; }
+  }
+
+  function loadLocalPeople() {
+    try { return JSON.parse(localStorage.getItem(PEOPLE_STORAGE_KEY)) || []; }
+    catch { return []; }
+  }
+
+  async function loadRepos() {
+    if (useServer) {
+      try {
+        const res = await fetch("/api/repos");
+        if (res.ok) { repos = await res.json(); return; }
+      } catch { /* server not reachable */ }
+      useServer = false;
+    }
+    repos = loadLocal();
+  }
+
+  async function loadPeople() {
+    if (useServer) {
+      try {
+        const res = await fetch("/api/people");
+        if (res.ok) { people = await res.json(); return; }
+      } catch { /* server not reachable */ }
+    }
+    people = loadLocalPeople();
+  }
+
+  function persist() {
+    if (useServer) {
+      fetch("/api/repos", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(repos)
+      }).catch(() => toast("Failed to save to database file!", "error"));
+    } else {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(repos));
+    }
+  }
+
+  function persistPeople() {
+    if (useServer) {
+      fetch("/api/people", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(people)
+      }).catch(() => toast("Failed to save to database file!", "error"));
+    } else {
+      localStorage.setItem(PEOPLE_STORAGE_KEY, JSON.stringify(people));
+    }
+  }
+
+  function toast(msg, type = "success") {
+    const t = $("toast");
+    $("toastMsg").textContent = msg;
+    t.className = type;
+    // force reflow so repeat toasts re-animate
+    void t.offsetWidth;
+    t.classList.add("show");
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove("show"), 2800);
+  }
+
+  // Parse owner/repo from any github URL form
+  function parseGithubUrl(input) {
+    input = input.trim();
+    if (!input) return null;
+    // allow "owner/repo" shorthand too
+    let m = input.match(/^([\w.-]+)\/([\w.-]+)$/);
+    if (m) return { owner: m[1], repo: m[2] };
+    try {
+      const u = new URL(input.startsWith("http") ? input : "https://" + input);
+      if (!/(^|\.)github\.com$/i.test(u.hostname)) return null;
+      const parts = u.pathname.split("/").filter(Boolean);
+      if (parts.length < 2) return null;
+      return { owner: parts[0], repo: parts[1].replace(/\.git$/, "") };
+    } catch { return null; }
+  }
+
+  // fetch GitHub info for one owner/repo; returns a repo entry (never throws)
+  async function fetchRepoEntry(parsed) {
+    let entry = {
+      fullName: parsed.owner + "/" + parsed.repo,
+      owner: parsed.owner,
+      name: parsed.repo,
+      url: `https://github.com/${parsed.owner}/${parsed.repo}`,
+      description: "",
+      stars: null,
+      forks: null,
+      language: null,
+      avatar: `https://github.com/${parsed.owner}.png?size=88`,
+      savedAt: Date.now(),
+      tags: [],
+      note: "",
+      pinned: false
+    };
+    try {
+      const res = await ghFetch(`https://api.github.com/repos/${parsed.owner}/${parsed.repo}`);
+      if (res.ok) {
+        const d = await res.json();
+        entry.fullName = d.full_name;
+        entry.owner = d.owner.login;
+        entry.name = d.name;
+        entry.url = d.html_url;
+        entry.description = d.description || "";
+        entry.stars = d.stargazers_count;
+        entry.forks = d.forks_count;
+        entry.language = d.language;
+        entry.avatar = d.owner.avatar_url;
+      } else if (res.status === 404) {
+        return { notFound: true, fullName: entry.fullName };
+      } else if (res.status === 403 || res.status === 429) {
+        // rate limited — still save the link, but flag it so the user is told
+        entry._rateLimited = true;
+      }
+    } catch { /* offline — save basic entry anyway */ }
+    return entry;
+  }
+
+  async function addRepo() {
+    // bulk-add: split pasted text into multiple URLs (space / comma / newline separated)
+    const pieces = urlInput.value.split(/[\s,]+/).filter(Boolean);
+    const parsedList = [];
+    for (const p of pieces) {
+      const parsed = parseGithubUrl(p);
+      if (parsed) parsedList.push(parsed);
+    }
+    if (!parsedList.length) {
+      toast("Please enter a valid GitHub repo URL (e.g. github.com/owner/repo)", "error");
+      return;
+    }
+
+    addBtn.disabled = true;
+    addBtn.textContent = parsedList.length > 1 ? `Fetching ${parsedList.length} repos...` : "Fetching...";
+
+    let added = 0, skipped = 0, notFound = 0, rateLimited = 0;
+    for (const parsed of parsedList) {
+      const key = (parsed.owner + "/" + parsed.repo).toLowerCase();
+      if (repos.some(r => r.fullName.toLowerCase() === key)) { skipped++; continue; }
+      const entry = await fetchRepoEntry(parsed);
+      if (entry.notFound) { notFound++; continue; }
+      if (entry._rateLimited) { rateLimited++; delete entry._rateLimited; }
+      repos.unshift(entry);
+      added++;
+    }
+
+    if (added) {
+      persist();
+      urlInput.value = "";
+      render();
+    }
+
+    if (parsedList.length === 1) {
+      if (rateLimited) toast(`${repos[0].fullName} saved without details — GitHub rate limit! Add a 🔑 Token, or hit Refresh later`, "error");
+      else if (added) toast(`✓ ${repos[0].fullName} saved!`);
+      else if (skipped) toast("This repo is already saved!", "error");
+      else toast("Repo not found — please check the URL", "error");
+    } else {
+      const parts = [];
+      if (added) parts.push(`${added} saved`);
+      if (rateLimited) parts.push(`${rateLimited} without details (rate limit — use 🔑 Token)`);
+      if (skipped) parts.push(`${skipped} already saved`);
+      if (notFound) parts.push(`${notFound} not found`);
+      toast(parts.join(" · "), added && !rateLimited ? "success" : "error");
+    }
+    resetAddBtn();
+  }
+
+  function resetAddBtn() {
+    addBtn.disabled = false;
+    addBtn.innerHTML = '<svg viewBox="0 0 16 16"><path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2Z"/></svg> Save';
+  }
+
+  function removeRepo(fullName) {
+    repos = repos.filter(r => r.fullName !== fullName);
+    persist();
+    render();
+    toast("Repo removed");
+  }
+
+  // re-fetch latest info (stars, description, etc.) for all saved repos
+  async function refreshAll() {
+    if (!repos.length) { toast("No repos to refresh", "error"); return; }
+    const btn = $("refreshBtn");
+    btn.disabled = true;
+    let updated = 0, failed = 0;
+    for (let i = 0; i < repos.length; i++) {
+      btn.textContent = `🔄 ${i + 1}/${repos.length}`;
+      const r = repos[i];
+      try {
+        const res = await ghFetch(`https://api.github.com/repos/${r.fullName}`);
+        if (res.ok) {
+          const d = await res.json();
+          Object.assign(r, {
+            fullName: d.full_name, owner: d.owner.login, name: d.name,
+            url: d.html_url, description: d.description || "",
+            stars: d.stargazers_count, forks: d.forks_count,
+            language: d.language, avatar: d.owner.avatar_url
+          });
+          updated++;
+        } else if (res.status === 403 || res.status === 429) {
+          // rate limited — stop early instead of hammering the API
+          toast(`GitHub rate limit reached — ${updated} updated, try again later`, "error");
+          break;
+        } else failed++;
+      } catch { failed++; }
+    }
+    persist();
+    render();
+    btn.disabled = false;
+    btn.textContent = "🔄 Refresh";
+    if (updated) toast(`✓ ${updated} repos updated${failed ? `, ${failed} failed` : ""}`);
+    else if (failed) toast("Could not refresh — check your internet", "error");
+  }
+
+  // ---------- edit modal (tags / note / pin) ----------
+  let editingRepo = null;
+
+  function openEditModal(fullName) {
+    const r = repos.find(x => x.fullName === fullName);
+    if (!r) return;
+    editingRepo = r;
+    $("editModalRepo").textContent = r.fullName;
+    $("editTags").value = (r.tags || []).join(", ");
+    $("editNote").value = r.note || "";
+    $("editPin").checked = !!r.pinned;
+    $("editModal").classList.add("open");
+    $("editTags").focus();
+  }
+
+  function closeEditModal() {
+    $("editModal").classList.remove("open");
+    editingRepo = null;
+  }
+
+  function saveEdit() {
+    if (!editingRepo) return;
+    editingRepo.tags = $("editTags").value
+      .split(",")
+      .map(t => t.trim().toLowerCase())
+      .filter(Boolean)
+      .filter((t, i, a) => a.indexOf(t) === i);
+    editingRepo.note = $("editNote").value.trim();
+    editingRepo.pinned = $("editPin").checked;
+    persist();
+    closeEditModal();
+    render();
+    toast("✓ Changes saved!");
+  }
+
+  function copyUrl(url) {
+    navigator.clipboard.writeText(url)
+      .then(() => toast("Link copied!"))
+      .catch(() => toast("Failed to copy", "error"));
+  }
+
+  function fmtNum(n) {
+    if (n == null) return "—";
+    if (n >= 1000) return (n / 1000).toFixed(n >= 10000 ? 0 : 1) + "k";
+    return String(n);
+  }
+
+  function fmtDate(ts) {
+    return new Date(ts).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  }
+
+  function esc(s) {
+    const d = document.createElement("div");
+    d.textContent = s ?? "";
+    return d.innerHTML;
+  }
+
+  function getFiltered() {
+    const q = searchInput.value.trim().toLowerCase();
+    const lang = langFilter.value;
+    const tag = tagFilter.value;
+    let list = repos.filter(r => {
+      const matchQ = !q || r.fullName.toLowerCase().includes(q)
+        || (r.description || "").toLowerCase().includes(q)
+        || (r.note || "").toLowerCase().includes(q)
+        || (r.tags || []).some(t => t.includes(q));
+      const matchL = !lang || r.language === lang;
+      const matchT = !tag || (r.tags || []).includes(tag);
+      return matchQ && matchL && matchT;
+    });
+    switch (sortBy.value) {
+      case "oldest": list = [...list].sort((a, b) => a.savedAt - b.savedAt); break;
+      case "stars": list = [...list].sort((a, b) => (b.stars || 0) - (a.stars || 0)); break;
+      case "name": list = [...list].sort((a, b) => a.name.localeCompare(b.name)); break;
+      default: list = [...list].sort((a, b) => b.savedAt - a.savedAt);
+    }
+    // pinned repos always float to the top
+    list.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+    return list;
+  }
+
+  function renderLangFilter() {
+    const langs = [...new Set(repos.map(r => r.language).filter(Boolean))].sort();
+    const current = langFilter.value;
+    langFilter.innerHTML = '<option value="">All languages</option>' +
+      langs.map(l => `<option value="${esc(l)}">${esc(l)}</option>`).join("");
+    if (langs.includes(current)) langFilter.value = current;
+  }
+
+  function renderTagFilter() {
+    const tags = [...new Set(repos.flatMap(r => r.tags || []))].sort();
+    const current = tagFilter.value;
+    tagFilter.innerHTML = '<option value="">All tags</option>' +
+      tags.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join("");
+    if (tags.includes(current)) tagFilter.value = current;
+  }
+
+  function render() {
+    renderLangFilter();
+    renderTagFilter();
+    repoCount.textContent = repos.length;
+    $("tabRepoCount").textContent = repos.length;
+    const list = getFiltered();
+
+    if (!repos.length) {
+      grid.innerHTML = `
+        <div class="empty">
+          <div class="empty-icon">📦</div>
+          <h2>No repos saved yet</h2>
+          <p>Paste a GitHub repo URL above to start your collection!</p>
+        </div>`;
+      return;
+    }
+    if (!list.length) {
+      grid.innerHTML = `
+        <div class="empty">
+          <div class="empty-icon">🔍</div>
+          <h2>Nothing found</h2>
+          <p>Try changing your search or filter.</p>
+        </div>`;
+      return;
+    }
+
+    grid.innerHTML = list.map((r, i) => {
+      const langColor = LANG_COLORS[r.language] || "#8b949e";
+      const tags = r.tags || [];
+      return `
+      <div class="card${r.pinned ? " pinned" : ""}" style="animation-delay:${Math.min(i * 45, 400)}ms">
+        ${r.pinned ? '<span class="pin-badge" title="Pinned">📌</span>' : ""}
+        <span class="saved-date">${fmtDate(r.savedAt)}</span>
+        <div class="card-top">
+          <img class="avatar" src="${esc(r.avatar)}" alt="" loading="lazy"
+               onerror="this.style.visibility='hidden'">
+          <div class="repo-names">
+            <div class="repo-owner">${esc(r.owner)}</div>
+            <div class="repo-name">${esc(r.name)}</div>
+          </div>
+        </div>
+        <p class="repo-desc">${esc(r.description) || "<i>No description</i>"}</p>
+        ${tags.length ? `<div class="tags-row">${tags.map(t =>
+          `<span class="tag${tagFilter.value === t ? " active-filter" : ""}" data-tag="${esc(t)}">${esc(t)}</span>`).join("")}</div>` : ""}
+        ${r.note ? `<div class="repo-note">📝 ${esc(r.note)}</div>` : ""}
+        <div class="meta-row">
+          ${r.language ? `<span class="meta-item"><span class="lang-dot" style="background:${langColor}"></span>${esc(r.language)}</span>` : ""}
+          <span class="meta-item stars"><svg viewBox="0 0 16 16"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"/></svg>${fmtNum(r.stars)}</span>
+          <span class="meta-item forks"><svg viewBox="0 0 16 16"><path d="M5 5.372v.878c0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75v-.878a2.25 2.25 0 1 1 1.5 0v.878a2.25 2.25 0 0 1-2.25 2.25h-1.5v2.128a2.251 2.251 0 1 1-1.5 0V8.5h-1.5A2.25 2.25 0 0 1 3.5 6.25v-.878a2.25 2.25 0 1 1 1.5 0ZM5 3.25a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Zm6.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm-3 8.75a.75.75 0 1 0-1.5 0 .75.75 0 0 0 1.5 0Z"/></svg>${fmtNum(r.forks)}</span>
+        </div>
+        <div class="card-actions">
+          <a class="btn btn-open" href="${esc(r.url)}" target="_blank" rel="noopener">
+            <svg viewBox="0 0 16 16"><path d="M3.75 2h3.5a.75.75 0 0 1 0 1.5h-3.5a.25.25 0 0 0-.25.25v8.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-3.5a.75.75 0 0 1 1.5 0v3.5A1.75 1.75 0 0 1 12.25 14h-8.5A1.75 1.75 0 0 1 2 12.25v-8.5C2 2.784 2.784 2 3.75 2Zm6.854-1h4.146a.25.25 0 0 1 .25.25v4.146a.25.25 0 0 1-.427.177L13.03 4.03 9.28 7.78a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042l3.75-3.75-1.543-1.543A.25.25 0 0 1 10.604 1Z"/></svg>
+            Open
+          </a>
+          <button class="btn btn-icon" title="Edit tags, note, pin" data-edit="${esc(r.fullName)}">
+            <svg viewBox="0 0 16 16"><path d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61Zm.176 4.823L9.75 4.81l-6.286 6.287a.253.253 0 0 0-.064.108l-.558 1.953 1.953-.558a.253.253 0 0 0 .108-.064Zm1.238-3.763a.25.25 0 0 0-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 0 0 0-.354Z"/></svg>
+          </button>
+          <button class="btn btn-icon" title="Copy link" data-copy="${esc(r.url)}">
+            <svg viewBox="0 0 16 16"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"/></svg>
+          </button>
+          <button class="btn btn-icon del" title="Remove" data-del="${esc(r.fullName)}">
+            <svg viewBox="0 0 16 16"><path d="M11 1.75V3h2.25a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1 0-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75ZM4.496 6.675l.66 6.6a.25.25 0 0 0 .249.225h5.19a.25.25 0 0 0 .249-.225l.66-6.6a.75.75 0 0 1 1.492.149l-.66 6.6A1.748 1.748 0 0 1 10.595 15h-5.19a1.75 1.75 0 0 1-1.741-1.575l-.66-6.6a.75.75 0 1 1 1.492-.15ZM6.5 1.75V3h3V1.75a.25.25 0 0 0-.25-.25h-2.5a.25.25 0 0 0-.25.25Z"/></svg>
+          </button>
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  // ================= PEOPLE (GitHub profiles to watch) =================
+
+  // Parse username from a github profile URL or plain "username"
+  function parseGithubUser(input) {
+    input = input.trim().replace(/^@/, "");
+    if (!input) return null;
+    // plain username
+    if (/^[\w-]+$/.test(input)) return input;
+    try {
+      const u = new URL(input.startsWith("http") ? input : "https://" + input);
+      if (!/(^|\.)github\.com$/i.test(u.hostname)) return null;
+      const parts = u.pathname.split("/").filter(Boolean);
+      if (parts.length !== 1) return null; // more than 1 part = repo url, not a profile
+      return parts[0];
+    } catch { return null; }
+  }
+
+  // fetch GitHub profile info for one username; returns a person entry (never throws)
+  async function fetchPersonEntry(login) {
+    let entry = {
+      login,
+      name: "",
+      url: `https://github.com/${login}`,
+      avatar: `https://github.com/${login}.png?size=128`,
+      bio: "",
+      followers: null,
+      following: null,
+      publicRepos: null,
+      company: "",
+      location: "",
+      addedAt: Date.now(),
+      lastChecked: Date.now(),
+      prevFollowers: null,   // followers count at previous refresh — for the growth delta
+      prevRepos: null,
+      relation: "friend",
+      note: ""
+    };
+    try {
+      const res = await ghFetch(`https://api.github.com/users/${login}`);
+      if (res.ok) {
+        const d = await res.json();
+        entry.login = d.login;
+        entry.name = d.name || "";
+        entry.url = d.html_url;
+        entry.avatar = d.avatar_url;
+        entry.bio = d.bio || "";
+        entry.followers = d.followers;
+        entry.following = d.following;
+        entry.publicRepos = d.public_repos;
+        entry.company = d.company || "";
+        entry.location = d.location || "";
+      } else if (res.status === 404) {
+        return { notFound: true, login };
+      } else if (res.status === 403 || res.status === 429) {
+        // rate limited — still save the profile, but flag it so the user is told
+        entry._rateLimited = true;
+      }
+    } catch { /* offline — save basic entry anyway */ }
+    return entry;
+  }
+
+  async function addPerson() {
+    // bulk-add works here too (space / comma / newline separated)
+    const pieces = personInput.value.split(/[\s,]+/).filter(Boolean);
+    const logins = [];
+    for (const p of pieces) {
+      const login = parseGithubUser(p);
+      if (login) logins.push(login);
+    }
+    if (!logins.length) {
+      toast("Please enter a valid GitHub username or profile URL", "error");
+      return;
+    }
+
+    personAddBtn.disabled = true;
+    personAddBtn.textContent = logins.length > 1 ? `Fetching ${logins.length} profiles...` : "Fetching...";
+
+    let added = 0, skipped = 0, notFound = 0, rateLimited = 0;
+    for (const login of logins) {
+      if (people.some(p => p.login.toLowerCase() === login.toLowerCase())) { skipped++; continue; }
+      const entry = await fetchPersonEntry(login);
+      if (entry.notFound) { notFound++; continue; }
+      if (entry._rateLimited) { rateLimited++; delete entry._rateLimited; }
+      people.unshift(entry);
+      added++;
+    }
+
+    if (added) {
+      persistPeople();
+      personInput.value = "";
+      renderPeople();
+    }
+
+    if (logins.length === 1) {
+      if (rateLimited) toast(`${people[0].login} added without details — GitHub rate limit! Add a 🔑 Token, or hit Refresh later`, "error");
+      else if (added) toast(`✓ ${people[0].login} added!`);
+      else if (skipped) toast("This person is already added!", "error");
+      else toast("User not found — please check the username", "error");
+    } else {
+      const parts = [];
+      if (added) parts.push(`${added} added`);
+      if (rateLimited) parts.push(`${rateLimited} without details (rate limit — use 🔑 Token)`);
+      if (skipped) parts.push(`${skipped} already added`);
+      if (notFound) parts.push(`${notFound} not found`);
+      toast(parts.join(" · "), added && !rateLimited ? "success" : "error");
+    }
+    personAddBtn.disabled = false;
+    personAddBtn.innerHTML = '<svg viewBox="0 0 16 16"><path d="M7.75 2a.75.75 0 0 1 .75.75V7h4.25a.75.75 0 0 1 0 1.5H8.5v4.25a.75.75 0 0 1-1.5 0V8.5H2.75a.75.75 0 0 1 0-1.5H7V2.75A.75.75 0 0 1 7.75 2Z"/></svg> Add';
+  }
+
+  function removePerson(login) {
+    people = people.filter(p => p.login !== login);
+    persistPeople();
+    renderPeople();
+    toast("Person removed");
+  }
+
+  // re-fetch latest profile info for everyone; remembers previous counts to show growth
+  async function refreshPeople() {
+    if (!people.length) { toast("No people to refresh", "error"); return; }
+    const btn = $("personRefreshBtn");
+    btn.disabled = true;
+    let updated = 0, failed = 0;
+    for (let i = 0; i < people.length; i++) {
+      btn.textContent = `🔄 ${i + 1}/${people.length}`;
+      const p = people[i];
+      try {
+        const res = await ghFetch(`https://api.github.com/users/${p.login}`);
+        if (res.ok) {
+          const d = await res.json();
+          // remember old counts so we can show ▲/▼ change since the last refresh
+          p.prevFollowers = p.followers;
+          p.prevRepos = p.publicRepos;
+          Object.assign(p, {
+            login: d.login, name: d.name || "", url: d.html_url,
+            avatar: d.avatar_url, bio: d.bio || "",
+            followers: d.followers, following: d.following,
+            publicRepos: d.public_repos,
+            company: d.company || "", location: d.location || "",
+            lastChecked: Date.now()
+          });
+          updated++;
+        } else if (res.status === 403 || res.status === 429) {
+          // rate limited — stop early instead of hammering the API
+          toast(`GitHub rate limit reached — ${updated} updated, try again later`, "error");
+          break;
+        } else failed++;
+      } catch { failed++; }
+    }
+    persistPeople();
+    renderPeople();
+    btn.disabled = false;
+    btn.textContent = "🔄 Refresh";
+    if (updated) toast(`✓ ${updated} profiles updated${failed ? `, ${failed} failed` : ""}`);
+    else if (failed) toast("Could not refresh — check your internet", "error");
+  }
+
+  // ---------- person edit modal (relation / note) ----------
+  let editingPerson = null;
+
+  function openPersonEditModal(login) {
+    const p = people.find(x => x.login === login);
+    if (!p) return;
+    editingPerson = p;
+    $("personEditModalName").textContent = p.name ? `${p.name} (@${p.login})` : "@" + p.login;
+    $("personEditRelation").value = p.relation || "friend";
+    $("personEditNote").value = p.note || "";
+    $("personEditModal").classList.add("open");
+  }
+
+  function closePersonEditModal() {
+    $("personEditModal").classList.remove("open");
+    editingPerson = null;
+  }
+
+  function savePersonEdit() {
+    if (!editingPerson) return;
+    editingPerson.relation = $("personEditRelation").value;
+    editingPerson.note = $("personEditNote").value.trim();
+    persistPeople();
+    closePersonEditModal();
+    renderPeople();
+    toast("✓ Changes saved!");
+  }
+
+  const RELATION_LABEL = { me: "🙋 me", friend: "🤝 friend", inspiration: "⭐ inspiration", other: "👤 other" };
+
+  function deltaBadge(current, prev) {
+    if (current == null || prev == null || current === prev) return "";
+    const diff = current - prev;
+    return `<span class="delta ${diff > 0 ? "up" : "down"}" title="Change since last refresh">${diff > 0 ? "▲" : "▼"}${fmtNum(Math.abs(diff))}</span>`;
+  }
+
+  function getFilteredPeople() {
+    const q = personSearchInput.value.trim().toLowerCase();
+    const rel = relationFilter.value;
+    let list = people.filter(p => {
+      const matchQ = !q || p.login.toLowerCase().includes(q)
+        || (p.name || "").toLowerCase().includes(q)
+        || (p.bio || "").toLowerCase().includes(q)
+        || (p.note || "").toLowerCase().includes(q)
+        || (p.location || "").toLowerCase().includes(q);
+      const matchR = !rel || (p.relation || "other") === rel;
+      return matchQ && matchR;
+    });
+    switch (personSortBy.value) {
+      case "followers": list = [...list].sort((a, b) => (b.followers || 0) - (a.followers || 0)); break;
+      case "growth": list = [...list].sort((a, b) =>
+        ((b.followers || 0) - (b.prevFollowers ?? b.followers ?? 0)) -
+        ((a.followers || 0) - (a.prevFollowers ?? a.followers ?? 0))); break;
+      case "name": list = [...list].sort((a, b) => (a.name || a.login).localeCompare(b.name || b.login)); break;
+      default: list = [...list].sort((a, b) => b.addedAt - a.addedAt);
+    }
+    return list;
+  }
+
+  function renderPeople() {
+    personCount.textContent = people.length;
+    $("tabPeopleCount").textContent = people.length;
+    const list = getFilteredPeople();
+
+    if (!people.length) {
+      peopleGrid.innerHTML = `
+        <div class="empty">
+          <div class="empty-icon">👤</div>
+          <h2>No people added yet</h2>
+          <p>Add your friends or favorite GitHub developers above to keep an eye on their work!</p>
+        </div>`;
+      return;
+    }
+    if (!list.length) {
+      peopleGrid.innerHTML = `
+        <div class="empty">
+          <div class="empty-icon">🔍</div>
+          <h2>Nothing found</h2>
+          <p>Try changing your search or filter.</p>
+        </div>`;
+      return;
+    }
+
+    peopleGrid.innerHTML = list.map((p, i) => {
+      const rel = p.relation || "other";
+      return `
+      <div class="card${rel === "me" ? " me" : ""}" style="animation-delay:${Math.min(i * 45, 400)}ms">
+        <span class="saved-date">${fmtDate(p.addedAt)}</span>
+        <div class="card-top">
+          <img class="person-avatar" src="${esc(p.avatar)}" alt="" loading="lazy"
+               onerror="this.style.visibility='hidden'">
+          <div class="repo-names">
+            <div class="person-name">${esc(p.name) || esc(p.login)}</div>
+            <div class="person-login">@${esc(p.login)}</div>
+          </div>
+        </div>
+        <p class="person-bio">${esc(p.bio) || "<i>No bio</i>"}</p>
+        <div class="person-stats">
+          <div class="stat-box">
+            <div class="stat-num">${fmtNum(p.followers)}${deltaBadge(p.followers, p.prevFollowers)}</div>
+            <div class="stat-label">Followers</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num">${fmtNum(p.publicRepos)}${deltaBadge(p.publicRepos, p.prevRepos)}</div>
+            <div class="stat-label">Repos</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num">${fmtNum(p.following)}</div>
+            <div class="stat-label">Following</div>
+          </div>
+        </div>
+        ${p.note ? `<div class="repo-note">📝 ${esc(p.note)}</div>` : ""}
+        <div class="person-meta">
+          <span class="relation-badge ${rel}">${RELATION_LABEL[rel] || rel}</span>
+          ${p.location ? `<span class="meta-item"><svg viewBox="0 0 16 16"><path d="m12.596 11.596-3.535 3.536a1.5 1.5 0 0 1-2.122 0l-3.535-3.536a6.5 6.5 0 1 1 9.192-9.193 6.5 6.5 0 0 1 0 9.193Zm-1.06-8.132v-.001a5 5 0 1 0-7.072 7.072L8 14.07l3.536-3.534a5 5 0 0 0 0-7.072ZM8 9a2 2 0 1 1-.001-3.999A2 2 0 0 1 8 9Z"/></svg>${esc(p.location)}</span>` : ""}
+          ${p.company ? `<span class="meta-item"><svg viewBox="0 0 16 16"><path d="M1.75 16A1.75 1.75 0 0 1 0 14.25V1.75C0 .784.784 0 1.75 0h8.5C11.216 0 12 .784 12 1.75v12.5c0 .085-.006.168-.018.25h2.268a.25.25 0 0 0 .25-.25V8.285a.25.25 0 0 0-.111-.208l-1.055-.703a.749.749 0 1 1 .832-1.248l1.055.703c.487.325.779.871.779 1.456v5.965A1.75 1.75 0 0 1 14.25 16h-3.5a.766.766 0 0 1-.197-.026c-.099.017-.2.026-.303.026h-3a.75.75 0 0 1-.75-.75V14h-1v1.25a.75.75 0 0 1-.75.75Zm-.25-1.75c0 .138.112.25.25.25H4v-1.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 .75.75v1.25h2.25a.25.25 0 0 0 .25-.25V1.75a.25.25 0 0 0-.25-.25h-8.5a.25.25 0 0 0-.25.25ZM3.75 6h.5a.75.75 0 0 1 0 1.5h-.5a.75.75 0 0 1 0-1.5ZM3 3.75A.75.75 0 0 1 3.75 3h.5a.75.75 0 0 1 0 1.5h-.5A.75.75 0 0 1 3 3.75Zm4 3A.75.75 0 0 1 7.75 6h.5a.75.75 0 0 1 0 1.5h-.5A.75.75 0 0 1 7 6.75ZM7.75 3h.5a.75.75 0 0 1 0 1.5h-.5a.75.75 0 0 1 0-1.5ZM3 9.75A.75.75 0 0 1 3.75 9h.5a.75.75 0 0 1 0 1.5h-.5A.75.75 0 0 1 3 9.75ZM7.75 9h.5a.75.75 0 0 1 0 1.5h-.5a.75.75 0 0 1 0-1.5Z"/></svg>${esc(p.company)}</span>` : ""}
+        </div>
+        <div class="card-actions">
+          <a class="btn btn-open" href="${esc(p.url)}" target="_blank" rel="noopener">
+            <svg viewBox="0 0 16 16"><path d="M3.75 2h3.5a.75.75 0 0 1 0 1.5h-3.5a.25.25 0 0 0-.25.25v8.5c0 .138.112.25.25.25h8.5a.25.25 0 0 0 .25-.25v-3.5a.75.75 0 0 1 1.5 0v3.5A1.75 1.75 0 0 1 12.25 14h-8.5A1.75 1.75 0 0 1 2 12.25v-8.5C2 2.784 2.784 2 3.75 2Zm6.854-1h4.146a.25.25 0 0 1 .25.25v4.146a.25.25 0 0 1-.427.177L13.03 4.03 9.28 7.78a.751.751 0 0 1-1.042-.018.751.751 0 0 1-.018-1.042l3.75-3.75-1.543-1.543A.25.25 0 0 1 10.604 1Z"/></svg>
+            Profile
+          </a>
+          <a class="btn btn-icon" title="See their repositories" href="${esc(p.url)}?tab=repositories" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;justify-content:center;">
+            <svg viewBox="0 0 16 16"><path d="M2 2.5A2.5 2.5 0 0 1 4.5 0h8.75a.75.75 0 0 1 .75.75v12.5a.75.75 0 0 1-.75.75h-2.5a.75.75 0 0 1 0-1.5h1.75v-2h-8a1 1 0 0 0-.714 1.7.75.75 0 1 1-1.072 1.05A2.495 2.495 0 0 1 2 11.5Zm10.5-1h-8a1 1 0 0 0-1 1v6.708A2.486 2.486 0 0 1 4.5 9h8ZM5 12.25a.25.25 0 0 1 .25-.25h3.5a.25.25 0 0 1 .25.25v3.25a.25.25 0 0 1-.4.2l-1.45-1.087a.249.249 0 0 0-.3 0L5.4 15.7a.25.25 0 0 1-.4-.2Z"/></svg>
+          </a>
+          <button class="btn btn-icon" title="Edit relation & note" data-person-edit="${esc(p.login)}">
+            <svg viewBox="0 0 16 16"><path d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25c.081-.286.235-.547.445-.758l8.61-8.61Zm.176 4.823L9.75 4.81l-6.286 6.287a.253.253 0 0 0-.064.108l-.558 1.953 1.953-.558a.253.253 0 0 0 .108-.064Zm1.238-3.763a.25.25 0 0 0-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 0 0 0-.354Z"/></svg>
+          </button>
+          <button class="btn btn-icon del" title="Remove" data-person-del="${esc(p.login)}">
+            <svg viewBox="0 0 16 16"><path d="M11 1.75V3h2.25a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1 0-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75ZM4.496 6.675l.66 6.6a.25.25 0 0 0 .249.225h5.19a.25.25 0 0 0 .249-.225l.66-6.6a.75.75 0 0 1 1.492.149l-.66 6.6A1.748 1.748 0 0 1 10.595 15h-5.19a1.75 1.75 0 0 1-1.741-1.575l-.66-6.6a.75.75 0 1 1 1.492-.15ZM6.5 1.75V3h3V1.75a.25.25 0 0 0-.25-.25h-2.5a.25.25 0 0 0-.25.25Z"/></svg>
+          </button>
+        </div>
+      </div>`;
+    }).join("");
+  }
+
+  // ---------- tabs ----------
+  function switchTab(tab) {
+    const isRepos = tab === "repos";
+    $("tabRepos").classList.toggle("active", isRepos);
+    $("tabPeople").classList.toggle("active", !isRepos);
+    $("reposSection").classList.toggle("active", isRepos);
+    $("peopleSection").classList.toggle("active", !isRepos);
+  }
+
+  // ---------- GitHub token modal ----------
+  async function openTokenModal() {
+    $("tokenInput").value = ghToken;
+    $("tokenModal").classList.add("open");
+    // show current rate limit status
+    const status = $("tokenStatus");
+    status.textContent = "Checking your current rate limit...";
+    try {
+      const res = await ghFetch("https://api.github.com/rate_limit");
+      const d = await res.json();
+      const core = d.resources.core;
+      const resetTime = new Date(core.reset * 1000).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+      status.innerHTML = `Current limit: <b style="color:var(--text)">${core.remaining} / ${core.limit}</b> requests left this hour` +
+        (core.remaining === 0 ? ` — resets at <b>${resetTime}</b>` : "") +
+        (ghToken ? ` <span style="color:var(--green)">✓ token active</span>` : ` <span style="color:var(--gold)">(no token — only 60/hour)</span>`);
+    } catch {
+      status.textContent = "Could not check rate limit — are you online?";
+    }
+  }
+
+  function closeTokenModal() { $("tokenModal").classList.remove("open"); }
+
+  async function saveToken() {
+    const t = $("tokenInput").value.trim();
+    if (!t) { toast("Paste a token first (or use Remove)", "error"); return; }
+    // validate the token before saving
+    const res = await fetch("https://api.github.com/rate_limit", {
+      headers: { Authorization: "Bearer " + t }
+    }).catch(() => null);
+    if (!res || res.status === 401) {
+      toast("This token is invalid — check that you copied it fully", "error");
+      return;
+    }
+    ghToken = t;
+    localStorage.setItem(TOKEN_KEY, t);
+    closeTokenModal();
+    toast("✓ Token saved — you now have 5000 requests/hour!");
+  }
+
+  function removeToken() {
+    ghToken = "";
+    localStorage.removeItem(TOKEN_KEY);
+    $("tokenInput").value = "";
+    closeTokenModal();
+    toast("Token removed");
+  }
+
+  // ---------- export / import ----------
+  function exportData() {
+    if (!repos.length && !people.length) { toast("Nothing to export", "error"); return; }
+    // new format: repos + people together (old array-only backups still import fine)
+    const payload = { repos, people };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "repovault-backup.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast("Backup downloaded!");
+  }
+
+  function importData(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        // old backups are a plain array of repos; new ones are {repos, people}
+        const repoList = Array.isArray(data) ? data : (Array.isArray(data.repos) ? data.repos : []);
+        const peopleList = !Array.isArray(data) && Array.isArray(data.people) ? data.people : [];
+        if (!repoList.length && !peopleList.length) throw new Error();
+        let added = 0, addedPeople = 0;
+        for (const r of repoList) {
+          if (!r || !r.fullName || !r.url) continue;
+          if (repos.some(x => x.fullName.toLowerCase() === r.fullName.toLowerCase())) continue;
+          repos.push(r);
+          added++;
+        }
+        for (const p of peopleList) {
+          if (!p || !p.login) continue;
+          if (people.some(x => x.login.toLowerCase() === p.login.toLowerCase())) continue;
+          people.push(p);
+          addedPeople++;
+        }
+        if (added) persist();
+        if (addedPeople) persistPeople();
+        render();
+        renderPeople();
+        const parts = [];
+        if (added) parts.push(`${added} repos`);
+        if (addedPeople) parts.push(`${addedPeople} people`);
+        toast(parts.length ? `${parts.join(" & ")} imported!` : "Everything was already saved");
+      } catch {
+        toast("Invalid backup file", "error");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // ---------- events ----------
+  addBtn.addEventListener("click", addRepo);
+  urlInput.addEventListener("keydown", e => { if (e.key === "Enter") addRepo(); });
+  searchInput.addEventListener("input", render);
+  langFilter.addEventListener("change", render);
+  tagFilter.addEventListener("change", render);
+  sortBy.addEventListener("change", render);
+  $("refreshBtn").addEventListener("click", refreshAll);
+  $("tokenBtn").addEventListener("click", openTokenModal);
+  $("tokenSave").addEventListener("click", saveToken);
+  $("tokenCancel").addEventListener("click", closeTokenModal);
+  $("tokenRemove").addEventListener("click", removeToken);
+  $("tokenModal").addEventListener("click", e => {
+    if (e.target === $("tokenModal")) closeTokenModal();
+  });
+  $("tokenInput").addEventListener("keydown", e => { if (e.key === "Enter") saveToken(); });
+  $("exportBtn").addEventListener("click", exportData);
+  $("importBtn").addEventListener("click", () => $("importFile").click());
+  $("importFile").addEventListener("change", e => {
+    if (e.target.files[0]) importData(e.target.files[0]);
+    e.target.value = "";
+  });
+
+  // people events
+  $("tabRepos").addEventListener("click", () => switchTab("repos"));
+  $("tabPeople").addEventListener("click", () => switchTab("people"));
+  personAddBtn.addEventListener("click", addPerson);
+  personInput.addEventListener("keydown", e => { if (e.key === "Enter") addPerson(); });
+  personSearchInput.addEventListener("input", renderPeople);
+  relationFilter.addEventListener("change", renderPeople);
+  personSortBy.addEventListener("change", renderPeople);
+  $("personRefreshBtn").addEventListener("click", refreshPeople);
+
+  // person edit modal events
+  $("personEditSave").addEventListener("click", savePersonEdit);
+  $("personEditCancel").addEventListener("click", closePersonEditModal);
+  $("personEditModal").addEventListener("click", e => {
+    if (e.target === $("personEditModal")) closePersonEditModal();
+  });
+
+  // event delegation on people grid: edit / delete
+  peopleGrid.addEventListener("click", e => {
+    const editBtn = e.target.closest("[data-person-edit]");
+    if (editBtn) { openPersonEditModal(editBtn.dataset.personEdit); return; }
+    const delBtn = e.target.closest("[data-person-del]");
+    if (delBtn && confirm(`Remove "${delBtn.dataset.personDel}"?`)) {
+      removePerson(delBtn.dataset.personDel);
+    }
+  });
+
+  // edit modal events
+  $("editSave").addEventListener("click", saveEdit);
+  $("editCancel").addEventListener("click", closeEditModal);
+  $("editModal").addEventListener("click", e => {
+    if (e.target === $("editModal")) closeEditModal();
+  });
+  $("editTags").addEventListener("keydown", e => { if (e.key === "Enter") saveEdit(); });
+
+  // keyboard shortcuts: "/" focuses search, Escape closes modal / clears search
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") {
+      if ($("editModal").classList.contains("open")) { closeEditModal(); return; }
+      if ($("personEditModal").classList.contains("open")) { closePersonEditModal(); return; }
+      if ($("tokenModal").classList.contains("open")) { closeTokenModal(); return; }
+      if (document.activeElement === searchInput && searchInput.value) {
+        searchInput.value = "";
+        render();
+      }
+      if (document.activeElement === personSearchInput && personSearchInput.value) {
+        personSearchInput.value = "";
+        renderPeople();
+      }
+      return;
+    }
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+    if (e.key === "/" && !typing) {
+      e.preventDefault();
+      // focus the search box of whichever tab is open
+      ($("peopleSection").classList.contains("active") ? personSearchInput : searchInput).focus();
+    }
+  });
+
+  // event delegation for edit / copy / delete / tag-click
+  grid.addEventListener("click", e => {
+    const tagEl = e.target.closest("[data-tag]");
+    if (tagEl) {
+      // toggle tag filter on click
+      tagFilter.value = tagFilter.value === tagEl.dataset.tag ? "" : tagEl.dataset.tag;
+      render();
+      return;
+    }
+    const editBtn = e.target.closest("[data-edit]");
+    if (editBtn) { openEditModal(editBtn.dataset.edit); return; }
+    const copyBtn = e.target.closest("[data-copy]");
+    if (copyBtn) { copyUrl(copyBtn.dataset.copy); return; }
+    const delBtn = e.target.closest("[data-del]");
+    if (delBtn && confirm(`Remove "${delBtn.dataset.del}"?`)) {
+      removeRepo(delBtn.dataset.del);
+    }
+  });
+
+  await loadRepos();
+  await loadPeople();
+  render();
+  renderPeople();
+})();
+</script>
+</body>
+</html>
