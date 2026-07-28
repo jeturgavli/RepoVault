@@ -5,13 +5,15 @@ const fs = require("fs");
 const path = require("path");
 
 const PORT = 3000;
-const DB_FILE = path.join(__dirname, "repos-database.json");
-const BACKUP_FILE = path.join(__dirname, "repos-database.backup.json");
-const PEOPLE_FILE = path.join(__dirname, "people-database.json");
-const PEOPLE_BACKUP_FILE = path.join(__dirname, "people-database.backup.json");
+const DATA_DIR = path.join(__dirname, "Database");
+const DB_FILE = path.join(DATA_DIR, "repos-database.json");
+const BACKUP_FILE = path.join(DATA_DIR, "repos-database.backup.json");
+const PEOPLE_FILE = path.join(DATA_DIR, "people-database.json");
+const PEOPLE_BACKUP_FILE = path.join(DATA_DIR, "people-database.backup.json");
 const HTML_FILE = path.join(__dirname, "repo-vault.html");
 
-// create empty database files if they don't exist
+// create data folder and empty database files if they don't exist
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 if (!fs.existsSync(DB_FILE)) fs.writeFileSync(DB_FILE, "[]", "utf8");
 if (!fs.existsSync(PEOPLE_FILE)) fs.writeFileSync(PEOPLE_FILE, "[]", "utf8");
 

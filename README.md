@@ -54,10 +54,11 @@ A dedicated **People** tab for keeping an eye on friends and inspiring GitHub us
 Cluade_testing/
 ├── repo-vault.html             # The entire website (single-page app, dark UI)
 ├── server.js                   # Node.js HTTP server (port 3000) + JSON storage API
-├── repos-database.json         # Your saved repos (the database)
-├── repos-database.backup.json  # Auto-backup, written before every save
-├── people-database.json        # Your followed people (GitHub profiles)
-├── people-database.backup.json # Auto-backup for people
+├── data/                       # All database files live here
+│   ├── repos-database.json     # Your saved repos
+│   ├── repos-database.backup.json  # Auto-backup, written before every save
+│   ├── people-database.json    # Your followed people (GitHub profiles)
+│   └── people-database.backup.json # Auto-backup for people
 └── start.bat                   # One-click launcher (starts server + opens browser)
 ```
 
@@ -96,7 +97,7 @@ Press `Ctrl+C` in the server window, or just close it.
 
 ## How Data Is Stored
 
-- Repos live in **`repos-database.json`**, followed people in **`people-database.json`** — both simple JSON arrays.
+- All database files live inside the **`data/`** folder: **`data/repos-database.json`** for repos and **`data/people-database.json`** for people — both simple JSON arrays.
 - Before every save, the server copies the current file to its `.backup.json` twin — so a bad write never destroys your data.
 - Each repo entry stores: `fullName`, `owner`, `name`, `url`, `description`, `stars`, `forks`, `language`, `avatar`, `savedAt`, `tags`, `note`, `pinned`.
 - Each person entry stores: `login`, `name`, `url`, `avatar`, `bio`, `followers`, `following`, `publicRepos`, `company`, `location`, `addedAt`, `lastChecked`, `prevFollowers`, `prevRepos`, `relation`, `note`.
