@@ -1,97 +1,327 @@
-// RepoVault Server — saves all repos to the repos-database.json file
+// RepoVault Server — Auth + Encrypted Database
 // To run: node server.js  (or double-click start.bat)
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 
+// ── Config ──────────────────────────────────────────────
 const PORT = 3000;
-const DATA_DIR = path.join(__dirname, "Database");
-const DB_FILE = path.join(DATA_DIR, "repos-database.json");
-const BACKUP_FILE = path.join(DATA_DIR, "repos-database.backup.json");
-const PEOPLE_FILE = path.join(DATA_DIR, "people-database.json");
-const PEOPLE_BACKUP_FILE = path.join(DATA_DIR, "people-database.backup.json");
+const DATA_DIR = path.join(__dirname, "Data_Base");
+const USERS_FILE = path.join(DATA_DIR, "users.json");
 const HTML_FILE = path.join(__dirname, "repo-vault.html");
 
-// create data folder and empty database files if they don't exist
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-if (!fs.existsSync(DB_FILE)) fs.writeFileSync(DB_FILE, "[]", "utf8");
-if (!fs.existsSync(PEOPLE_FILE)) fs.writeFileSync(PEOPLE_FILE, "[]", "utf8");
+// ── Helpers ─────────────────────────────────────────────
 
-const server = http.createServer((req, res) => {
+// Read full request body
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = "";
+    req.on("data", chunk => { body += chunk; });
+    req.on("end", () => resolve(body));
+    req.on("error", reject);
+  });
+}
+
+// JSON response
+function json(res, status, data) {
+  res.writeHead(status, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  });
+  res.end(JSON.stringify(data));
+}
+
+// Password hashing (PBKDF2)
+function hashPassword(password, salt) {
+  return crypto.pbkdf2Sync(password, salt, 100000, 64, "sha512").toString("hex");
+}
+
+function generateSalt() {
+  return crypto.randomBytes(16).toString("hex");
+}
+
+// AES-256-GCM encryption
+function encrypt(plainText, key) {
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
+  let encrypted = cipher.update(plainText, "utf8", "hex");
+  encrypted += cipher.final("hex");
+  const authTag = cipher.getAuthTag().toString("hex");
+  // Store as: iv:authTag:ciphertext (all hex)
+  return iv.toString("hex") + ":" + authTag + ":" + encrypted;
+}
+
+function decrypt(cipherText, key) {
+  const parts = cipherText.split(":");
+  if (parts.length !== 3) throw new Error("Invalid encrypted format");
+  const iv = Buffer.from(parts[0], "hex");
+  const authTag = Buffer.from(parts[1], "hex");
+  const encrypted = parts[2];
+  const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
+  decipher.setAuthTag(authTag);
+  let decrypted = decipher.update(encrypted, "hex", "utf8");
+  decrypted += decipher.final("utf8");
+  return decrypted;
+}
+
+// Derive encryption key from password
+function deriveKey(password, salt) {
+  return crypto.pbkdf2Sync(password, salt, 100000, 32, "sha512");
+}
+
+// Generate random session token
+function generateToken() {
+  return crypto.randomBytes(32).toString("hex");
+}
+
+// ── Users Database ──────────────────────────────────────
+function loadUsers() {
+  if (!fs.existsSync(USERS_FILE)) return [];
+  return JSON.parse(fs.readFileSync(USERS_FILE, "utf8"));
+}
+
+function saveUsers(users) {
+  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), "utf8");
+}
+
+// ── Per-User Encrypted Data ─────────────────────────────
+function getUserDataDir(username) {
+  const dir = path.join(DATA_DIR, "users", username);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+function getUserFile(username, filename) {
+  return path.join(getUserDataDir(username), filename);
+}
+
+function readEncryptedFile(filePath, encryptionKey) {
+  if (!fs.existsSync(filePath)) return [];
+  const raw = fs.readFileSync(filePath, "utf8");
+  if (!raw.trim()) return [];
+  const decrypted = decrypt(raw, encryptionKey);
+  return JSON.parse(decrypted);
+}
+
+function writeEncryptedFile(filePath, data, encryptionKey) {
+  // Backup before writing
+  if (fs.existsSync(filePath)) {
+    const backupPath = filePath + ".backup";
+    fs.copyFileSync(filePath, backupPath);
+  }
+  const jsonStr = JSON.stringify(data, null, 2);
+  const encrypted = encrypt(jsonStr, encryptionKey);
+  fs.writeFileSync(filePath, encrypted, "utf8");
+}
+
+// ── Session Store ───────────────────────────────────────
+// Map<token, { username, key: Buffer }>
+const sessions = new Map();
+
+function getSession(req) {
+  const auth = req.headers["authorization"];
+  if (!auth || !auth.startsWith("Bearer ")) return null;
+  const token = auth.slice(7);
+  return sessions.get(token) || null;
+}
+
+// ── Ensure data/ folder exists ──────────────────────────
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+
+// ── Server ──────────────────────────────────────────────
+const server = http.createServer(async (req, res) => {
   const url = req.url.split("?")[0];
 
-  // serve the website
-  if (url === "/" || url === "/index.html") {
+  // CORS preflight
+  if (req.method === "OPTIONS") {
+    res.writeHead(204, {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, PUT, POST, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    });
+    res.end();
+    return;
+  }
+
+  // ── Serve HTML ────────────────────────────────────────
+  if ((url === "/" || url === "/index.html") && req.method === "GET") {
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     fs.createReadStream(HTML_FILE).pipe(res);
     return;
   }
 
-  // saare repos bhejo
+  // ── Serve static files (CSS, JS) ──────────────────────
+  const STATIC_MAP = { "/styles.css": "text/css", "/app.js": "application/javascript" };
+  if (STATIC_MAP[url] && req.method === "GET") {
+    const filePath = path.join(__dirname, url.slice(1)); // remove leading /
+    if (fs.existsSync(filePath)) {
+      res.writeHead(200, { "Content-Type": STATIC_MAP[url] + "; charset=utf-8" });
+      fs.createReadStream(filePath).pipe(res);
+      return;
+    }
+  }
+
+  // ── Auth: Register ────────────────────────────────────
+  if (url === "/api/auth/register" && req.method === "POST") {
+    try {
+      const body = JSON.parse(await readBody(req));
+      const { username, password } = body;
+
+      if (!username || !password) {
+        return json(res, 400, { ok: false, error: "Username and password are required" });
+      }
+      if (username.length < 3 || username.length < 3) {
+        return json(res, 400, { ok: false, error: "Username must be at least 3 characters" });
+      }
+      if (password.length < 4) {
+        return json(res, 400, { ok: false, error: "Password must be at least 4 characters" });
+      }
+      if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+        return json(res, 400, { ok: false, error: "Username can only contain letters, numbers, underscores, dashes" });
+      }
+
+      const users = loadUsers();
+      if (users.find(u => u.username === username)) {
+        return json(res, 409, { ok: false, error: "This username is already taken" });
+      }
+
+      const salt = generateSalt();
+      const passwordHash = hashPassword(password, salt);
+      users.push({ username, salt, passwordHash, createdAt: new Date().toISOString() });
+      saveUsers(users);
+
+      // Create user data folder
+      getUserDataDir(username);
+
+      json(res, 200, { ok: true });
+    } catch {
+      json(res, 400, { ok: false, error: "Invalid data sent" });
+    }
+    return;
+  }
+
+  // ── Auth: Login ───────────────────────────────────────
+  if (url === "/api/auth/login" && req.method === "POST") {
+    try {
+      const body = JSON.parse(await readBody(req));
+      const { username, password } = body;
+
+      if (!username || !password) {
+        return json(res, 400, { ok: false, error: "Username and password are required" });
+      }
+
+      const users = loadUsers();
+      const user = users.find(u => u.username === username);
+      if (!user) {
+        return json(res, 401, { ok: false, error: "Invalid username or password" });
+      }
+
+      const hash = hashPassword(password, user.salt);
+      if (hash !== user.passwordHash) {
+        return json(res, 401, { ok: false, error: "Invalid username or password" });
+      }
+
+      // Derive encryption key from password and store in session
+      const encKey = deriveKey(password, user.salt);
+      const token = generateToken();
+      sessions.set(token, { username, key: encKey });
+
+      json(res, 200, { ok: true, token, username });
+    } catch {
+      json(res, 400, { ok: false, error: "Invalid data sent" });
+    }
+    return;
+  }
+
+  // ── Auth: Logout ──────────────────────────────────────
+  if (url === "/api/auth/logout" && req.method === "POST") {
+    const auth = req.headers["authorization"];
+    if (auth && auth.startsWith("Bearer ")) {
+      sessions.delete(auth.slice(7));
+    }
+    json(res, 200, { ok: true });
+    return;
+  }
+
+  // ── Auth: Check session ───────────────────────────────
+  if (url === "/api/auth/me" && req.method === "GET") {
+    const session = getSession(req);
+    if (!session) {
+      return json(res, 401, { ok: false, error: "Not logged in" });
+    }
+    json(res, 200, { ok: true, username: session.username });
+    return;
+  }
+
+  // ── Protected Routes Below ────────────────────────────
+  const session = getSession(req);
+  if (!session) {
+    return json(res, 401, { ok: false, error: "Please login first" });
+  }
+
+  const reposFile = getUserFile(session.username, "repos-database.json");
+  const peopleFile = getUserFile(session.username, "people-database.json");
+
+  // ── GET /api/repos ────────────────────────────────────
   if (url === "/api/repos" && req.method === "GET") {
-    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-    res.end(fs.readFileSync(DB_FILE, "utf8"));
+    try {
+      const data = readEncryptedFile(reposFile, session.key);
+      json(res, 200, data);
+    } catch {
+      json(res, 200, []);
+    }
     return;
   }
 
-  // save repos to the database file
+  // ── PUT /api/repos ────────────────────────────────────
   if (url === "/api/repos" && req.method === "PUT") {
-    let body = "";
-    req.on("data", chunk => { body += chunk; });
-    req.on("end", () => {
-      try {
-        const data = JSON.parse(body);
-        if (!Array.isArray(data)) throw new Error("expected an array");
-        // keep a backup of the previous state before overwriting
-        if (fs.existsSync(DB_FILE)) fs.copyFileSync(DB_FILE, BACKUP_FILE);
-        fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), "utf8");
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end('{"ok":true}');
-      } catch {
-        res.writeHead(400, { "Content-Type": "application/json" });
-        res.end('{"ok":false}');
-      }
-    });
+    try {
+      const data = JSON.parse(await readBody(req));
+      if (!Array.isArray(data)) throw new Error("expected an array");
+      writeEncryptedFile(reposFile, data, session.key);
+      json(res, 200, { ok: true });
+    } catch {
+      json(res, 400, { ok: false });
+    }
     return;
   }
 
-  // saare saved people (GitHub profiles) bhejo
+  // ── GET /api/people ───────────────────────────────────
   if (url === "/api/people" && req.method === "GET") {
-    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-    res.end(fs.readFileSync(PEOPLE_FILE, "utf8"));
+    try {
+      const data = readEncryptedFile(peopleFile, session.key);
+      json(res, 200, data);
+    } catch {
+      json(res, 200, []);
+    }
     return;
   }
 
-  // save people to the database file
+  // ── PUT /api/people ───────────────────────────────────
   if (url === "/api/people" && req.method === "PUT") {
-    let body = "";
-    req.on("data", chunk => { body += chunk; });
-    req.on("end", () => {
-      try {
-        const data = JSON.parse(body);
-        if (!Array.isArray(data)) throw new Error("expected an array");
-        // keep a backup of the previous state before overwriting
-        if (fs.existsSync(PEOPLE_FILE)) fs.copyFileSync(PEOPLE_FILE, PEOPLE_BACKUP_FILE);
-        fs.writeFileSync(PEOPLE_FILE, JSON.stringify(data, null, 2), "utf8");
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end('{"ok":true}');
-      } catch {
-        res.writeHead(400, { "Content-Type": "application/json" });
-        res.end('{"ok":false}');
-      }
-    });
+    try {
+      const data = JSON.parse(await readBody(req));
+      if (!Array.isArray(data)) throw new Error("expected an array");
+      writeEncryptedFile(peopleFile, data, session.key);
+      json(res, 200, { ok: true });
+    } catch {
+      json(res, 400, { ok: false });
+    }
     return;
   }
 
-  res.writeHead(404);
-  res.end("Not found");
+  // ── 404 ───────────────────────────────────────────────
+  json(res, 404, { error: "Not found" });
 });
 
 server.listen(PORT, () => {
   console.log("");
   console.log("  ✦ RepoVault is running!");
   console.log("  ✦ Open in browser:  http://localhost:" + PORT);
-  console.log("  ✦ Database file:    " + DB_FILE);
+  console.log("  ✦ Database dir:     " + DATA_DIR);
+  console.log("  ✦ Encryption:       AES-256-GCM");
   console.log("");
   console.log("  To stop: press Ctrl+C or close this window");
 });

@@ -1,0 +1,5 @@
+# Database files — never push to GitHub (contains encrypted user data)
+Data_Base/
+
+# Old database folder name (keep ignored in case it still exists)
+data/

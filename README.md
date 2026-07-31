@@ -1,8 +1,8 @@
 # RepoVault 📦
 
-A personal GitHub repository bookmark manager. Save links to interesting GitHub repos, organize them with tags and notes, follow the developers you admire, and keep everything stored safely on your own machine — no account, no cloud, no tracking.
+A personal GitHub repository bookmark manager. Save links to interesting GitHub repos, organize them with tags and notes, follow the developers you admire, and keep everything **encrypted** and **password-protected** on your own machine — no account, no cloud, no tracking.
 
-![Platform](https://img.shields.io/badge/platform-Windows-blue) ![Runtime](https://img.shields.io/badge/runtime-Node.js-green) ![Storage](https://img.shields.io/badge/storage-local%20JSON-orange)
+![Platform](https://img.shields.io/badge/platform-Windows-blue) ![Runtime](https://img.shields.io/badge/runtime-Node.js-green) ![Storage](https://img.shields.io/badge/storage-AES%20256%20GCM-orange) ![Auth](https://img.shields.io/badge/auth-Login%20%2F%20Register-brightgreen)
 
 ---
 
@@ -30,6 +30,8 @@ GitHub's own "Star" feature quickly becomes a messy, unsearchable list. RepoVaul
 | 💾 **Export / Import** | Back up or move your collection as a JSON file |
 | 🛡️ **Auto-backup** | The server backs up the database before every write |
 | 🌙 **Dark UI** | Single-page dark interface, easy on the eyes |
+| 🔐 **Login & Register** | Create your own account — only you can access your vault |
+| 🔒 **Encrypted database** | All data stored as AES-256-GCM encrypted files — opening the file directly shows garbled text |
 | 🔑 **GitHub token** | Optional personal access token raises the API limit from 60 → 5000 requests/hour (🔑 Token button in the toolbar; stored only in your browser) |
 
 ### 👤 People — follow developers you admire
@@ -51,14 +53,19 @@ A dedicated **People** tab for keeping an eye on friends and inspiring GitHub us
 ## Project Structure
 
 ```
-Cluade_testing/
-├── repo-vault.html             # The entire website (single-page app, dark UI)
-├── server.js                   # Node.js HTTP server (port 3000) + JSON storage API
-├── data/                       # All database files live here
-│   ├── repos-database.json     # Your saved repos
-│   ├── repos-database.backup.json  # Auto-backup, written before every save
-│   ├── people-database.json    # Your followed people (GitHub profiles)
-│   └── people-database.backup.json # Auto-backup for people
+Repo-Vault/
+├── repo-vault.html             # Main HTML page (links to CSS + JS externally)
+├── styles.css                  # All styles (dark UI, glassmorphic cards, auth overlay)
+├── app.js                      # All JavaScript (auth, GitHub API, rendering, encryption client)
+├── server.js                   # Node.js HTTP server (port 3000) + Auth + Encryption API
+├── Data_Base/                  # All encrypted database files live here
+│   ├── users.json              # User accounts (username + password hash)
+│   └── users/
+│       └── {username}/
+│           ├── repos-database.json         # Encrypted repos data
+│           ├── repos-database.backup.json  # Encrypted backup
+│           ├── people-database.json        # Encrypted people data
+│           └── people-database.backup.json # Encrypted backup
 └── start.bat                   # One-click launcher (starts server + opens browser)
 ```
 
@@ -85,9 +92,11 @@ node server.js
 
 Then open <http://localhost:3000> in your browser.
 
-**Option 3 — no server:**
+**First time?** Click "Register karo" to create an account (username + password). After registering, sign in to access your vault. Your data stays encrypted on your machine — only you can read it.
 
-Open `repo-vault.html` directly as a file. It still works, but data is saved to the browser's localStorage instead of the JSON file (less safe — clearing browser data wipes your collection).
+**Option 3 — no server (offline mode):**
+
+Open `repo-vault.html` directly as a file, or click "Bina server ke chalao" on the login screen. It still works, but data is saved to the browser's localStorage instead of the encrypted JSON file (less safe — clearing browser data wipes your collection).
 
 ### Stop the server
 
@@ -97,20 +106,27 @@ Press `Ctrl+C` in the server window, or just close it.
 
 ## How Data Is Stored
 
-- All database files live inside the **`data/`** folder: **`data/repos-database.json`** for repos and **`data/people-database.json`** for people — both simple JSON arrays.
-- Before every save, the server copies the current file to its `.backup.json` twin — so a bad write never destroys your data.
+- Each user gets their own folder: **`Data_Base/users/{username}/`** — all data files here are **AES-256-GCM encrypted**.
+- If you open an encrypted file directly (e.g. in Notepad), you'll see garbled hex text — not readable JSON.
+- The encryption key is derived from your password and lives **only in server memory** during your session. It's cleared on logout.
+- Before every save, the server copies the current encrypted file to its `.backup.json` twin — so a bad write never destroys your data.
+- User account credentials (`Data_Base/users.json`) store only the username + password hash — never the raw password.
 - Each repo entry stores: `fullName`, `owner`, `name`, `url`, `description`, `stars`, `forks`, `language`, `avatar`, `savedAt`, `tags`, `note`, `pinned`.
 - Each person entry stores: `login`, `name`, `url`, `avatar`, `bio`, `followers`, `following`, `publicRepos`, `company`, `location`, `addedAt`, `lastChecked`, `prevFollowers`, `prevRepos`, `relation`, `note`.
 
 ### API (used by the frontend)
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/` | Serves the website |
-| `GET` | `/api/repos` | Returns all saved repos |
-| `PUT` | `/api/repos` | Replaces the repos database with the sent array (backs up first) |
-| `GET` | `/api/people` | Returns all followed people |
-| `PUT` | `/api/people` | Replaces the people database with the sent array (backs up first) |
+| Method | Endpoint | Auth required | Description |
+|--------|----------|:------------:|-------------|
+| `GET` | `/` | ❌ | Serves the website |
+| `POST` | `/api/auth/register` | ❌ | Create a new account (`{ username, password }`) |
+| `POST` | `/api/auth/login` | ❌ | Login (`{ username, password }`) → returns session token |
+| `POST` | `/api/auth/logout` | ✅ | Destroy current session |
+| `GET` | `/api/auth/me` | ✅ | Check if logged in, returns username |
+| `GET` | `/api/repos` | ✅ | Returns all saved repos (decrypted) |
+| `PUT` | `/api/repos` | ✅ | Replaces the repos database (encrypted before saving) |
+| `GET` | `/api/people` | ✅ | Returns all followed people (decrypted) |
+| `PUT` | `/api/people` | ✅ | Replaces the people database (encrypted before saving) |
 
 ---
 
