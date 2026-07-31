@@ -175,4 +175,6 @@ Ideas for upcoming versions, roughly in priority order:
 
 ## License
 
-Personal project — use it however you like.
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+
+You're free to use, modify, and distribute it. Just keep the copyright notice intact.
