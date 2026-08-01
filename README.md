@@ -92,11 +92,11 @@ node server.js
 
 Then open <http://localhost:3000> in your browser.
 
-**First time?** Click "Register karo" to create an account (username + password). After registering, sign in to access your vault. Your data stays encrypted on your machine — only you can read it.
+**First time?** Click "Register" to create an account (username + password). After registering, sign in to access your vault. Your data stays encrypted on your machine — only you can read it.
 
 **Option 3 — no server (offline mode):**
 
-Open `repo-vault.html` directly as a file, or click "Bina server ke chalao" on the login screen. It still works, but data is saved to the browser's localStorage instead of the encrypted JSON file (less safe — clearing browser data wipes your collection).
+Open `repo-vault.html` directly as a file, or click "Continue without server (localStorage mode)" on the login screen. It still works, but data is saved to the browser's localStorage instead of the encrypted JSON file (less safe — clearing browser data wipes your collection).
 
 ### Stop the server
 
