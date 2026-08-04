@@ -172,7 +172,7 @@ const server = http.createServer(async (req, res) => {
       if (!username || !password) {
         return json(res, 400, { ok: false, error: "Username and password are required" });
       }
-      if (username.length < 3 || username.length < 3) {
+      if (username.length < 3 || username.length > 30) {
         return json(res, 400, { ok: false, error: "Username must be at least 3 characters" });
       }
       if (password.length < 4) {

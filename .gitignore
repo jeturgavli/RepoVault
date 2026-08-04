@@ -3,3 +3,7 @@ Data_Base/
 
 # Old database folder name (keep ignored in case it still exists)
 data/
+
+# Issue files 
+ISSUES.md
+issues/
