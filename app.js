@@ -22,10 +22,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ── GitHub API helper — adds the personal access token (if saved) to every call.
   // Without a token: 60 requests/hour. With one: 5000/hour.
   let ghToken = localStorage.getItem(TOKEN_KEY) || "";
+  // GitHub API fetch with a 10-second timeout so buttons never hang forever
+  const GH_TIMEOUT_MS = 10000;
   function ghFetch(url) {
     const headers = { Accept: "application/vnd.github+json" };
     if (ghToken) headers.Authorization = "Bearer " + ghToken;
-    return fetch(url, { headers });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), GH_TIMEOUT_MS);
+    return fetch(url, { headers, signal: controller.signal })
+      .finally(() => clearTimeout(timer));
   }
 
   // GitHub language colors (common ones)
@@ -203,7 +208,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         // rate limited — still save the link, but flag it so the user is told
         entry._rateLimited = true;
       }
-    } catch { /* offline — save basic entry anyway */ }
+    } catch (err) {
+      if (err.name === "AbortError") entry._timedOut = true; // request timed out
+      /* offline — save basic entry anyway */
+    }
     return entry;
   }
 
@@ -223,13 +231,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     addBtn.disabled = true;
     addBtn.textContent = parsedList.length > 1 ? `Fetching ${parsedList.length} repos...` : "Fetching...";
 
-    let added = 0, skipped = 0, notFound = 0, rateLimited = 0;
+    let added = 0, skipped = 0, notFound = 0, rateLimited = 0, timedOut = 0;
     for (const parsed of parsedList) {
       const key = (parsed.owner + "/" + parsed.repo).toLowerCase();
       if (repos.some(r => r.fullName.toLowerCase() === key)) { skipped++; continue; }
       const entry = await fetchRepoEntry(parsed);
       if (entry.notFound) { notFound++; continue; }
       if (entry._rateLimited) { rateLimited++; delete entry._rateLimited; }
+      if (entry._timedOut) { timedOut++; delete entry._timedOut; }
       repos.unshift(entry);
       added++;
     }
@@ -242,6 +251,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (parsedList.length === 1) {
       if (rateLimited) toast(`${repos[0].fullName} saved without details — GitHub rate limit! Add a 🔑 Token, or hit Refresh later`, "error");
+      else if (timedOut) toast(`${repos[0].fullName} saved, but GitHub timed out — details will fill in on Refresh`, "error");
       else if (added) toast(`✓ ${repos[0].fullName} saved!`);
       else if (skipped) toast("This repo is already saved!", "error");
       else toast("Repo not found — please check the URL", "error");
@@ -249,6 +259,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const parts = [];
       if (added) parts.push(`${added} saved`);
       if (rateLimited) parts.push(`${rateLimited} without details (rate limit — use 🔑 Token)`);
+      if (timedOut) parts.push(`${timedOut} timed out (will fill on Refresh)`);
       if (skipped) parts.push(`${skipped} already saved`);
       if (notFound) parts.push(`${notFound} not found`);
       toast(parts.join(" · "), added && !rateLimited ? "success" : "error");
@@ -526,7 +537,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         // rate limited — still save the profile, but flag it so the user is told
         entry._rateLimited = true;
       }
-    } catch { /* offline — save basic entry anyway */ }
+    } catch (err) {
+      if (err.name === "AbortError") entry._timedOut = true; // request timed out
+      /* offline — save basic entry anyway */
+    }
     return entry;
   }
 
@@ -546,12 +560,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     personAddBtn.disabled = true;
     personAddBtn.textContent = logins.length > 1 ? `Fetching ${logins.length} profiles...` : "Fetching...";
 
-    let added = 0, skipped = 0, notFound = 0, rateLimited = 0;
+    let added = 0, skipped = 0, notFound = 0, rateLimited = 0, timedOut = 0;
     for (const login of logins) {
       if (people.some(p => p.login.toLowerCase() === login.toLowerCase())) { skipped++; continue; }
       const entry = await fetchPersonEntry(login);
       if (entry.notFound) { notFound++; continue; }
       if (entry._rateLimited) { rateLimited++; delete entry._rateLimited; }
+      if (entry._timedOut) { timedOut++; delete entry._timedOut; }
       people.unshift(entry);
       added++;
     }
@@ -564,6 +579,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (logins.length === 1) {
       if (rateLimited) toast(`${people[0].login} added without details — GitHub rate limit! Add a 🔑 Token, or hit Refresh later`, "error");
+      else if (timedOut) toast(`${people[0].login} added, but GitHub timed out — details will fill in on Refresh`, "error");
       else if (added) toast(`✓ ${people[0].login} added!`);
       else if (skipped) toast("This person is already added!", "error");
       else toast("User not found — please check the username", "error");
@@ -571,6 +587,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const parts = [];
       if (added) parts.push(`${added} added`);
       if (rateLimited) parts.push(`${rateLimited} without details (rate limit — use 🔑 Token)`);
+      if (timedOut) parts.push(`${timedOut} timed out (will fill on Refresh)`);
       if (skipped) parts.push(`${skipped} already added`);
       if (notFound) parts.push(`${notFound} not found`);
       toast(parts.join(" · "), added && !rateLimited ? "success" : "error");
