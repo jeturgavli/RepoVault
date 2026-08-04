@@ -105,6 +105,18 @@ function readEncryptedFile(filePath, encryptionKey) {
   return JSON.parse(decrypted);
 }
 
+function restoreFromBackup(filePath, encryptionKey) {
+  const backupPath = filePath + ".backup";
+  if (!fs.existsSync(backupPath)) throw new Error("No backup file found");
+  const raw = fs.readFileSync(backupPath, "utf8");
+  if (!raw.trim()) throw new Error("Backup file is empty");
+  const decrypted = decrypt(raw, encryptionKey);
+  const data = JSON.parse(decrypted);
+  // Restore: copy backup over the main file
+  fs.copyFileSync(backupPath, filePath);
+  return data;
+}
+
 function writeEncryptedFile(filePath, data, encryptionKey) {
   // Backup before writing
   if (fs.existsSync(filePath)) {
@@ -270,7 +282,18 @@ const server = http.createServer(async (req, res) => {
       const data = readEncryptedFile(reposFile, session.key);
       json(res, 200, data);
     } catch {
-      json(res, 200, []);
+      json(res, 500, { ok: false, error: "Data file is corrupted or unreadable", corrupted: true });
+    }
+    return;
+  }
+
+  // ── POST /api/repos/restore ───────────────────────────
+  if (url === "/api/repos/restore" && req.method === "POST") {
+    try {
+      const data = restoreFromBackup(reposFile, session.key);
+      json(res, 200, { ok: true, data });
+    } catch (e) {
+      json(res, 500, { ok: false, error: e.message });
     }
     return;
   }
@@ -294,7 +317,18 @@ const server = http.createServer(async (req, res) => {
       const data = readEncryptedFile(peopleFile, session.key);
       json(res, 200, data);
     } catch {
-      json(res, 200, []);
+      json(res, 500, { ok: false, error: "Data file is corrupted or unreadable", corrupted: true });
+    }
+    return;
+  }
+
+  // ── POST /api/people/restore ──────────────────────────
+  if (url === "/api/people/restore" && req.method === "POST") {
+    try {
+      const data = restoreFromBackup(peopleFile, session.key);
+      json(res, 200, { ok: true, data });
+    } catch (e) {
+      json(res, 500, { ok: false, error: e.message });
     }
     return;
   }

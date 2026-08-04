@@ -66,6 +66,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const res = await fetch("/api/repos", { headers: authHeaders() });
         if (res.ok) { repos = await res.json(); return; }
         if (res.status === 401) { showAuth(); return; }
+        if (res.status === 500) { await promptRestore("repos"); return; }
       } catch { /* server not reachable */ }
       useServer = false;
     }
@@ -77,9 +78,42 @@ document.addEventListener("DOMContentLoaded", async () => {
       try {
         const res = await fetch("/api/people", { headers: authHeaders() });
         if (res.ok) { people = await res.json(); return; }
+        if (res.status === 401) { showAuth(); return; }
+        if (res.status === 500) { await promptRestore("people"); return; }
       } catch { /* server not reachable */ }
     }
     people = loadLocalPeople();
+  }
+
+  // Show a dialog offering to restore from backup when data is corrupted
+  async function promptRestore(kind) {
+    const label = kind === "repos" ? "Repos database" : "People database";
+    if (!confirm(label + " file is corrupted or unreadable.\n\nRestore from the latest backup? (If you cancel, a fresh empty vault will be used.)")) {
+      if (kind === "repos") repos = [];
+      else people = [];
+      return;
+    }
+    try {
+      const res = await fetch("/api/" + kind + "/restore", {
+        method: "POST",
+        headers: authHeaders()
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (kind === "repos") repos = data.data;
+        else people = data.data;
+        toast(label + " restored from backup ✓");
+      } else {
+        const err = await res.json();
+        toast("Restore failed: " + (err.error || "unknown error"), "error");
+        if (kind === "repos") repos = [];
+        else people = [];
+      }
+    } catch {
+      toast("Server unreachable — could not restore", "error");
+      if (kind === "repos") repos = [];
+      else people = [];
+    }
   }
 
   function persist() {
