@@ -71,7 +71,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         const res = await fetch("/api/repos", { headers: authHeaders() });
         if (res.ok) {
           repos = await res.json();
-          if (serverDown) syncLocalToServer();
+          if (localStorage.getItem("repovault_needs_sync") === "true") {
+            syncLocalToServer();
+            localStorage.removeItem("repovault_needs_sync");
+          }
           serverDown = false;
           return;
         }
@@ -89,7 +92,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         const res = await fetch("/api/people", { headers: authHeaders() });
         if (res.ok) {
           people = await res.json();
-          if (serverDown) syncLocalToServer();
+          if (localStorage.getItem("repovault_needs_sync") === "true") {
+            syncLocalToServer();
+            localStorage.removeItem("repovault_needs_sync");
+          }
           serverDown = false;
           return;
         }
@@ -136,6 +142,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function fallbackToLocal() {
     serverDown = true;
+    localStorage.setItem("repovault_needs_sync", "true"); // persists across page reloads
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(repos));
       localStorage.setItem(PEOPLE_STORAGE_KEY, JSON.stringify(people));
