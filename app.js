@@ -69,7 +69,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (useServer) {
       try {
         const res = await fetch("/api/repos", { headers: authHeaders() });
-        if (res.ok) { repos = await res.json(); return; }
+        if (res.ok) {
+          repos = await res.json();
+          if (serverDown) syncLocalToServer();
+          serverDown = false;
+          return;
+        }
         if (res.status === 401) { showAuth(); return; }
         if (res.status === 500) { await promptRestore("repos"); return; }
       } catch { /* server not reachable */ }
@@ -82,7 +87,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (useServer) {
       try {
         const res = await fetch("/api/people", { headers: authHeaders() });
-        if (res.ok) { people = await res.json(); return; }
+        if (res.ok) {
+          people = await res.json();
+          if (serverDown) syncLocalToServer();
+          serverDown = false;
+          return;
+        }
         if (res.status === 401) { showAuth(); return; }
         if (res.status === 500) { await promptRestore("people"); return; }
       } catch { /* server not reachable */ }
@@ -121,25 +131,83 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  // ── Issue #004 Fix (v1): localStorage fallback + sync ──
+  let serverDown = false;
+
+  function fallbackToLocal() {
+    serverDown = true;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(repos));
+      localStorage.setItem(PEOPLE_STORAGE_KEY, JSON.stringify(people));
+      toast("Server unavailable — data saved locally", "error");
+    } catch {
+      toast("Failed to save to database file!", "error");
+    }
+  }
+
+  // When server comes back, merge localStorage data that the server doesn't have
+  function syncLocalToServer() {
+    try {
+      const localRepos = loadLocal();
+      const localPeople = loadLocalPeople();
+      let reposSynced = 0, peopleSynced = 0;
+
+      if (localRepos.length) {
+        const serverKeys = new Set(repos.map(r => (r.fullName || "").toLowerCase()));
+        for (const lr of localRepos) {
+          if (!serverKeys.has((lr.fullName || "").toLowerCase())) {
+            repos.push(lr);
+            reposSynced++;
+          }
+        }
+      }
+
+      if (localPeople.length) {
+        const serverLogins = new Set(people.map(p => (p.login || "").toLowerCase()));
+        for (const lp of localPeople) {
+          if (!serverLogins.has((lp.login || "").toLowerCase())) {
+            people.push(lp);
+            peopleSynced++;
+          }
+        }
+      }
+
+      if (reposSynced || peopleSynced) {
+        const parts = [];
+        if (reposSynced) parts.push(`${reposSynced} repos`);
+        if (peopleSynced) parts.push(`${peopleSynced} people`);
+        toast(`Synced ${parts.join(" & ")} from local backup ✓`);
+        persist();
+        persistPeople();
+      }
+    } catch {
+      toast("Sync failed — local data preserved", "error");
+    }
+  }
+
   function persist() {
-    if (useServer) {
+    if (useServer && !serverDown) {
       fetch("/api/repos", {
         method: "PUT",
         headers: authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(repos)
-      }).catch(() => toast("Failed to save to database file!", "error"));
+      })
+        .then(res => { if (!res.ok) throw new Error("server error"); })
+        .catch(() => fallbackToLocal());
     } else {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(repos));
     }
   }
 
   function persistPeople() {
-    if (useServer) {
+    if (useServer && !serverDown) {
       fetch("/api/people", {
         method: "PUT",
         headers: authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify(people)
-      }).catch(() => toast("Failed to save to database file!", "error"));
+      })
+        .then(res => { if (!res.ok) throw new Error("server error"); })
+        .catch(() => fallbackToLocal());
     } else {
       localStorage.setItem(PEOPLE_STORAGE_KEY, JSON.stringify(people));
     }
