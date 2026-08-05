@@ -71,9 +71,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         const res = await fetch("/api/repos", { headers: authHeaders() });
         if (res.ok) {
           repos = await res.json();
-          if (localStorage.getItem("repovault_needs_sync") === "true") {
+          const uKey = currentUsername || "_anon";
+          if (localStorage.getItem("repovault_needs_sync_" + uKey) === "true") {
             syncLocalToServer();
-            localStorage.removeItem("repovault_needs_sync");
           }
           serverDown = false;
           return;
@@ -92,9 +92,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         const res = await fetch("/api/people", { headers: authHeaders() });
         if (res.ok) {
           people = await res.json();
-          if (localStorage.getItem("repovault_needs_sync") === "true") {
+          const uKey = currentUsername || "_anon";
+          if (localStorage.getItem("repovault_needs_sync_" + uKey) === "true") {
             syncLocalToServer();
-            localStorage.removeItem("repovault_needs_sync");
           }
           serverDown = false;
           return;
@@ -142,21 +142,25 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function fallbackToLocal() {
     serverDown = true;
-    localStorage.setItem("repovault_needs_sync", "true"); // persists across page reloads
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(repos));
-      localStorage.setItem(PEOPLE_STORAGE_KEY, JSON.stringify(people));
+      const uKey = currentUsername || "_anon";
+      localStorage.setItem(STORAGE_KEY + "_" + uKey, JSON.stringify(repos));
+      localStorage.setItem(PEOPLE_STORAGE_KEY + "_" + uKey, JSON.stringify(people));
+      localStorage.setItem("repovault_needs_sync_" + uKey, "true");
       toast("Server unavailable — data saved locally", "error");
     } catch {
       toast("Failed to save to database file!", "error");
     }
   }
 
-  // When server comes back, merge localStorage data that the server doesn't have
+  // When server comes back, merge per-user localStorage data that the server doesn't have
   function syncLocalToServer() {
     try {
-      const localRepos = loadLocal();
-      const localPeople = loadLocalPeople();
+      const uKey = currentUsername || "_anon";
+      const localReposRaw = localStorage.getItem(STORAGE_KEY + "_" + uKey);
+      const localPeopleRaw = localStorage.getItem(PEOPLE_STORAGE_KEY + "_" + uKey);
+      const localRepos = localReposRaw ? JSON.parse(localReposRaw) : [];
+      const localPeople = localPeopleRaw ? JSON.parse(localPeopleRaw) : [];
       let reposSynced = 0, peopleSynced = 0;
 
       if (localRepos.length) {
@@ -187,6 +191,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         persist();
         persistPeople();
       }
+
+      // Clean up per-user keys
+      localStorage.removeItem(STORAGE_KEY + "_" + uKey);
+      localStorage.removeItem(PEOPLE_STORAGE_KEY + "_" + uKey);
+      localStorage.removeItem("repovault_needs_sync_" + uKey);
     } catch {
       toast("Sync failed — local data preserved", "error");
     }
