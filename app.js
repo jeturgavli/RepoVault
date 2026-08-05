@@ -137,7 +137,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // ── Issue #004 Fix (v1): localStorage fallback + sync ──
+  // Issue #004: localStorage fallback with per-user sync — data never lost on server failure
   let serverDown = false;
 
   function fallbackToLocal() {

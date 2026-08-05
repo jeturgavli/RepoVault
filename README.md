@@ -29,6 +29,7 @@ GitHub's own "Star" feature quickly becomes a messy, unsearchable list. RepoVaul
 | 🔍 **Search** | Press `/` anywhere to jump to the search box |
 | 💾 **Export / Import** | Back up or move your collection as a JSON file |
 | 🛡️ **Auto-backup** | The server backs up the database before every write |
+| 💾 **Offline safety** | Server down? Data saves locally — auto-syncs back when server recovers |
 | 🌙 **Dark UI** | Single-page dark interface, easy on the eyes |
 | 🔐 **Login & Register** | Create your own account — only you can access your vault |
 | 🔒 **Encrypted database** | All data stored as AES-256-GCM encrypted files — opening the file directly shows garbled text |
