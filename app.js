@@ -945,6 +945,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         let added = 0, addedPeople = 0;
         for (const r of repoList) {
           if (!r || !r.fullName || !r.url) continue;
+          // Reject non-https URLs to prevent javascript: XSS
+          if (r.url && !r.url.startsWith("https://")) continue;
           if (repos.some(x => x.fullName.toLowerCase() === r.fullName.toLowerCase())) continue;
           repos.push(r);
           added++;
@@ -952,6 +954,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         const VALID_RELATIONS = ["me", "friend", "inspiration", "other"];
         for (const p of peopleList) {
           if (!p || !p.login) continue;
+          // Reject non-https URLs to prevent javascript: XSS
+          if (p.url && !p.url.startsWith("https://")) continue;
           if (people.some(x => x.login.toLowerCase() === p.login.toLowerCase())) continue;
           // Sanitize relation field to prevent XSS via malicious import
           p.relation = VALID_RELATIONS.includes(p.relation) ? p.relation : "other";
