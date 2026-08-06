@@ -200,8 +200,9 @@ const server = http.createServer(async (req, res) => {
       }
 
       const salt = generateSalt();
+      const encSalt = generateSalt(); // separate salt for encryption key (not shared with auth hash)
       const passwordHash = hashPassword(password, salt);
-      users.push({ username, salt, passwordHash, createdAt: new Date().toISOString() });
+      users.push({ username, salt, encSalt, passwordHash, createdAt: new Date().toISOString() });
       saveUsers(users);
 
       // Create user data folder
@@ -235,8 +236,8 @@ const server = http.createServer(async (req, res) => {
         return json(res, 401, { ok: false, error: "Invalid username or password" });
       }
 
-      // Derive encryption key from password and store in session
-      const encKey = deriveKey(password, user.salt);
+      // Derive encryption key using separate salt (fallback to auth salt for old users)
+      const encKey = deriveKey(password, user.encSalt || user.salt);
       const token = generateToken();
       sessions.set(token, { username, key: encKey });
 
