@@ -129,15 +129,31 @@ function writeEncryptedFile(filePath, data, encryptionKey) {
 }
 
 // ── Session Store ───────────────────────────────────────
-// Map<token, { username, key: Buffer }>
+// Map<token, { username, key: Buffer, createdAt: number }>
 const sessions = new Map();
+const SESSION_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
 function getSession(req) {
   const auth = req.headers["authorization"];
   if (!auth || !auth.startsWith("Bearer ")) return null;
   const token = auth.slice(7);
-  return sessions.get(token) || null;
+  const session = sessions.get(token);
+  if (!session) return null;
+  // Check if session expired
+  if (Date.now() - session.createdAt > SESSION_TTL) {
+    sessions.delete(token);
+    return null;
+  }
+  return session;
 }
+
+// Cleanup expired sessions every 30 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, session] of sessions) {
+    if (now - session.createdAt > SESSION_TTL) sessions.delete(token);
+  }
+}, 30 * 60 * 1000);
 
 // ── Rate Limiter ────────────────────────────────────────
 // Map<ip, { attempts: number, resetAt: number }>
@@ -297,7 +313,7 @@ const server = http.createServer(async (req, res) => {
       // Derive encryption key using separate salt (fallback to auth salt for old users)
       const encKey = deriveKey(password, user.encSalt || user.salt);
       const token = generateToken();
-      sessions.set(token, { username, key: encKey });
+      sessions.set(token, { username, key: encKey, createdAt: Date.now() });
 
       json(res, 200, { ok: true, token, username });
     } catch {
