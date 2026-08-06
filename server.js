@@ -228,6 +228,10 @@ const server = http.createServer(async (req, res) => {
   // ── Auth: Register ────────────────────────────────────
   if (url === "/api/auth/register" && req.method === "POST") {
     try {
+      const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+      const rl = checkRateLimit(ip, "register");
+      if (!rl.ok) return json(res, 429, { ok: false, error: rl.error });
+
       const body = JSON.parse(await readBody(req));
       const { username, password } = body;
 
