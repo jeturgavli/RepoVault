@@ -139,6 +139,48 @@ function getSession(req) {
   return sessions.get(token) || null;
 }
 
+// ── Rate Limiter ────────────────────────────────────────
+// Map<ip, { attempts: number, resetAt: number }>
+const rateLimiter = new Map();
+const RATE_LIMIT = 5; // max attempts
+const RATE_WINDOW = 60 * 1000; // 1 minute
+const RATE_BLOCK = 15 * 60 * 1000; // block for 15 minutes
+
+function checkRateLimit(ip, key) {
+  const now = Date.now();
+  const mapKey = ip + ":" + key;
+  let entry = rateLimiter.get(mapKey);
+
+  // If block period expired, reset
+  if (entry && entry.resetAt < now) {
+    entry = null;
+    rateLimiter.delete(mapKey);
+  }
+
+  if (!entry) {
+    rateLimiter.set(mapKey, { attempts: 1, resetAt: now + RATE_WINDOW });
+    return { ok: true };
+  }
+
+  entry.attempts++;
+
+  // Too many attempts — block
+  if (entry.attempts > RATE_LIMIT) {
+    const waitSec = Math.ceil((entry.resetAt - now) / 1000);
+    return { ok: false, error: `Too many attempts. Try again in ${waitSec} seconds.` };
+  }
+
+  return { ok: true };
+}
+
+// Cleanup expired entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of rateLimiter) {
+    if (entry.resetAt < now) rateLimiter.delete(key);
+  }
+}, 5 * 60 * 1000);
+
 // ── Ensure data/ folder exists ──────────────────────────
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
