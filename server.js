@@ -146,10 +146,18 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 const server = http.createServer(async (req, res) => {
   const url = req.url.split("?")[0];
 
+  // CORS: reject non-localhost origins
+  const ALLOWED_ORIGINS = ["http://localhost:3000", "http://localhost"];
+  const origin = req.headers.origin;
+  if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+    json(res, 403, { error: "Forbidden" });
+    return;
+  }
+
   // CORS preflight
   if (req.method === "OPTIONS") {
     res.writeHead(204, {
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": origin || "http://localhost:3000",
       "Access-Control-Allow-Methods": "GET, PUT, POST, DELETE, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
     });
