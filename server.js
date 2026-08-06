@@ -359,7 +359,7 @@ const server = http.createServer(async (req, res) => {
   json(res, 404, { error: "Not found" });
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, "127.0.0.1", () => {
   console.log("");
   console.log("  ✦ RepoVault is running!");
   console.log("  ✦ Open in browser:  http://localhost:" + PORT);
