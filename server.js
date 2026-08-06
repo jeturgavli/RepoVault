@@ -272,6 +272,10 @@ const server = http.createServer(async (req, res) => {
   // ── Auth: Login ───────────────────────────────────────
   if (url === "/api/auth/login" && req.method === "POST") {
     try {
+      const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+      const rl = checkRateLimit(ip, "login");
+      if (!rl.ok) return json(res, 429, { ok: false, error: rl.error });
+
       const body = JSON.parse(await readBody(req));
       const { username, password } = body;
 
