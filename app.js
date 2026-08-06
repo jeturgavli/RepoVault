@@ -949,9 +949,12 @@ document.addEventListener("DOMContentLoaded", async () => {
           repos.push(r);
           added++;
         }
+        const VALID_RELATIONS = ["me", "friend", "inspiration", "other"];
         for (const p of peopleList) {
           if (!p || !p.login) continue;
           if (people.some(x => x.login.toLowerCase() === p.login.toLowerCase())) continue;
+          // Sanitize relation field to prevent XSS via malicious import
+          p.relation = VALID_RELATIONS.includes(p.relation) ? p.relation : "other";
           people.push(p);
           addedPeople++;
         }
