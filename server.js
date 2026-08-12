@@ -266,8 +266,14 @@ const server = http.createServer(async (req, res) => {
       if (username.length < 3 || username.length > 30) {
         return json(res, 400, { ok: false, error: "Username must be at least 3 characters" });
       }
-      if (password.length < 4) {
-        return json(res, 400, { ok: false, error: "Password must be at least 4 characters" });
+      if (password.length < 8) {
+        return json(res, 400, { ok: false, error: "Password must be at least 8 characters" });
+      }
+      if (!/[A-Z]/.test(password)) {
+        return json(res, 400, { ok: false, error: "Password must contain at least one uppercase letter" });
+      }
+      if (!/[0-9]/.test(password)) {
+        return json(res, 400, { ok: false, error: "Password must contain at least one number" });
       }
       if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
         return json(res, 400, { ok: false, error: "Username can only contain letters, numbers, underscores, dashes" });

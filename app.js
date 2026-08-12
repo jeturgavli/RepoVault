@@ -1123,7 +1123,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     const c = $("regConfirm").value;
     if (!u || !p) { $("regError").textContent = "Please enter username and password"; return; }
     if (u.length < 3) { $("regError").textContent = "Username must be at least 3 characters"; return; }
-    if (p.length < 4) { $("regError").textContent = "Password must be at least 4 characters"; return; }
+    if (p.length < 8) { $("regError").textContent = "Password must be at least 8 characters"; return; }
+    if (!/[A-Z]/.test(p)) { $("regError").textContent = "Password must contain at least one uppercase letter"; return; }
+    if (!/[0-9]/.test(p)) { $("regError").textContent = "Password must contain at least one number"; return; }
     if (p !== c) { $("regError").textContent = "Passwords don't match"; return; }
     $("registerBtn").disabled = true;
     $("registerBtn").textContent = "Creating account...";
