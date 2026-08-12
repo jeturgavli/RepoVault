@@ -452,6 +452,8 @@ server.listen(PORT, "127.0.0.1", () => {
   console.log("  ✦ Open in browser:  http://localhost:" + PORT);
   console.log("  ✦ Database dir:     " + DATA_DIR);
   console.log("  ✦ Encryption:       AES-256-GCM");
+  console.log("  ✦ Binding:          127.0.0.1 (localhost only — not on LAN)");
+  console.log("  ✦ Transport:        HTTP (local only — do not expose without HTTPS)");
   console.log("");
   console.log("  To stop: press Ctrl+C or close this window");
 });

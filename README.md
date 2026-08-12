@@ -102,6 +102,8 @@ Repo-Vault/
 - [Node.js](https://nodejs.org/) installed (any recent version — no npm packages needed)
 - Windows (for `start.bat`; on other systems just run `node server.js`)
 
+> ⚠️ **Important:** This server binds to `127.0.0.1` (localhost) only and uses plain HTTP. It is designed for **local personal use only**. Do not expose it to a network without adding HTTPS — credentials and session tokens would be transmitted in clear text.
+
 ### Run it
 
 **Option 1 — the easy way:**
