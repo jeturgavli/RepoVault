@@ -13,11 +13,20 @@ const HTML_FILE = path.join(__dirname, "repo-vault.html");
 
 // ── Helpers ─────────────────────────────────────────────
 
-// Read full request body
-function readBody(req) {
+// Read request body with size limit (default 10 MB)
+function readBody(req, maxSize = 10 * 1024 * 1024) {
   return new Promise((resolve, reject) => {
     let body = "";
-    req.on("data", chunk => { body += chunk; });
+    let size = 0;
+    req.on("data", chunk => {
+      size += chunk.length;
+      if (size > maxSize) {
+        req.destroy();
+        reject(new Error("Too large"));
+        return;
+      }
+      body += chunk;
+    });
     req.on("end", () => resolve(body));
     req.on("error", reject);
   });
@@ -248,7 +257,7 @@ const server = http.createServer(async (req, res) => {
       const rl = checkRateLimit(ip, "register");
       if (!rl.ok) return json(res, 429, { ok: false, error: rl.error });
 
-      const body = JSON.parse(await readBody(req));
+      const body = JSON.parse(await readBody(req, 1024 * 1024)); // 1 MB for auth
       const { username, password } = body;
 
       if (!username || !password) {
@@ -292,7 +301,7 @@ const server = http.createServer(async (req, res) => {
       const rl = checkRateLimit(ip, "login");
       if (!rl.ok) return json(res, 429, { ok: false, error: rl.error });
 
-      const body = JSON.parse(await readBody(req));
+      const body = JSON.parse(await readBody(req, 1024 * 1024)); // 1 MB for auth
       const { username, password } = body;
 
       if (!username || !password) {
@@ -376,8 +385,11 @@ const server = http.createServer(async (req, res) => {
   // ── PUT /api/repos ────────────────────────────────────
   if (url === "/api/repos" && req.method === "PUT") {
     try {
-      const data = JSON.parse(await readBody(req));
-      if (!Array.isArray(data)) throw new Error("expected an array");
+      const MAX_ITEMS = 5000; // reasonable quota to prevent disk exhaustion
+      const data = JSON.parse(await readBody(req, 10 * 1024 * 1024));
+      if (!Array.isArray(data) || data.length > MAX_ITEMS) {
+        return json(res, 400, { ok: false, error: `Maximum ${MAX_ITEMS} items allowed` });
+      }
       writeEncryptedFile(reposFile, data, session.key);
       json(res, 200, { ok: true });
     } catch {
@@ -411,8 +423,11 @@ const server = http.createServer(async (req, res) => {
   // ── PUT /api/people ───────────────────────────────────
   if (url === "/api/people" && req.method === "PUT") {
     try {
-      const data = JSON.parse(await readBody(req));
-      if (!Array.isArray(data)) throw new Error("expected an array");
+      const MAX_ITEMS = 5000; // reasonable quota to prevent disk exhaustion
+      const data = JSON.parse(await readBody(req, 10 * 1024 * 1024));
+      if (!Array.isArray(data) || data.length > MAX_ITEMS) {
+        return json(res, 400, { ok: false, error: `Maximum ${MAX_ITEMS} items allowed` });
+      }
       writeEncryptedFile(peopleFile, data, session.key);
       json(res, 200, { ok: true });
     } catch {
