@@ -321,7 +321,10 @@ const server = http.createServer(async (req, res) => {
       }
 
       const hash = hashPassword(password, user.salt);
-      if (hash !== user.passwordHash) {
+      // Constant-time comparison to prevent timing attacks
+      const derived = Buffer.from(hash, "utf8");
+      const stored = Buffer.from(user.passwordHash, "utf8");
+      if (derived.length !== stored.length || !crypto.timingSafeEqual(derived, stored)) {
         return json(res, 401, { ok: false, error: "Invalid username or password" });
       }
 
