@@ -32,8 +32,19 @@ function readBody(req, maxSize = 10 * 1024 * 1024) {
   });
 }
 
+// Security headers for every response (mitigates XSS, clickjacking, etc.)
+function setSecurityHeaders(res) {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("Content-Security-Policy",
+    "default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; " +
+    "script-src 'self' 'unsafe-inline'; connect-src 'self' https://api.github.com");
+}
+
 // JSON response
 function json(res, status, data) {
+  setSecurityHeaders(res);
   res.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
     "Access-Control-Allow-Origin": "http://localhost:3000",
@@ -223,6 +234,7 @@ const server = http.createServer(async (req, res) => {
 
   // CORS preflight
   if (req.method === "OPTIONS") {
+    setSecurityHeaders(res);
     res.writeHead(204, {
       "Access-Control-Allow-Origin": origin || "http://localhost:3000",
       "Access-Control-Allow-Methods": "GET, PUT, POST, DELETE, OPTIONS",
@@ -234,6 +246,7 @@ const server = http.createServer(async (req, res) => {
 
   // ── Serve HTML ────────────────────────────────────────
   if ((url === "/" || url === "/index.html") && req.method === "GET") {
+    setSecurityHeaders(res);
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     fs.createReadStream(HTML_FILE).pipe(res);
     return;
@@ -244,6 +257,7 @@ const server = http.createServer(async (req, res) => {
   if (STATIC_MAP[url] && req.method === "GET") {
     const filePath = path.join(__dirname, url.slice(1)); // remove leading /
     if (fs.existsSync(filePath)) {
+      setSecurityHeaders(res);
       res.writeHead(200, { "Content-Type": STATIC_MAP[url] + "; charset=utf-8" });
       fs.createReadStream(filePath).pipe(res);
       return;
