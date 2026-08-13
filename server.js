@@ -245,6 +245,7 @@ const server = http.createServer(async (req, res) => {
 
   // ── Serve HTML ────────────────────────────────────────
   if ((url === "/" || url === "/index.html") && req.method === "GET") {
+    setSecurityHeaders(res);
     res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     fs.createReadStream(HTML_FILE).pipe(res);
     return;
@@ -255,6 +256,7 @@ const server = http.createServer(async (req, res) => {
   if (STATIC_MAP[url] && req.method === "GET") {
     const filePath = path.join(__dirname, url.slice(1)); // remove leading /
     if (fs.existsSync(filePath)) {
+      setSecurityHeaders(res);
       res.writeHead(200, { "Content-Type": STATIC_MAP[url] + "; charset=utf-8" });
       fs.createReadStream(filePath).pipe(res);
       return;
