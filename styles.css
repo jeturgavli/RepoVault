@@ -637,6 +637,16 @@
 
   .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
   .modal-actions .btn { padding: 12px; }
+
+  /* forgot password modal — reset instructions */
+  .forgot-intro { font-size: 0.92rem; line-height: 1.55; color: var(--text); margin-bottom: 8px; }
+  .forgot-list { font-size: 0.9rem; line-height: 1.6; color: var(--text-dim); padding-left: 20px; }
+  .forgot-list li { margin-bottom: 10px; }
+  .forgot-list li:last-child { margin-bottom: 0; }
+  .forgot-list b { color: var(--text); }
+  .forgot-list code { background: var(--card); padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 0.86rem; }
+  .forgot-list code i { color: var(--accent); font-style: italic; }
+  .forgot-warning { font-size: 0.88rem; color: var(--danger); margin-top: 14px; padding: 10px 12px; background: rgba(248, 81, 73, 0.08); border-left: 3px solid var(--danger); border-radius: 0 8px 8px 0; }
   .btn-save {
     background: linear-gradient(135deg, #1f6feb, #8957e5);
     color: #fff;

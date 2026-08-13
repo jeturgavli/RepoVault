@@ -217,6 +217,31 @@
   </div>
 </div>
 
+<!-- forgot password modal: explains that password reset requires manual data wipe -->
+<div class="modal-overlay" id="forgotModal">
+  <div class="modal">
+    <h3>🔒 Forgot password?</h3>
+    <p class="modal-sub">RepoVault stores your password as a one-way hash on your own machine — <b>no one can recover it for you</b> (not even from the server).</p>
+    <div class="field">
+      <p class="forgot-intro">To reset your password, you have two options:</p>
+      <ol class="forgot-list">
+        <li>
+          <b>If you remember your username:</b> Stop the server, then delete the folder
+          <code>Data_Base/users/<i>your_username</i>/</code>
+          from the RepoVault project. Restart the server and register again with the same username.
+        </li>
+        <li>
+          <b>If you've forgotten the username too:</b> Open <code>Data_Base/users.json</code> in any text editor — it lists every registered username.
+        </li>
+      </ol>
+      <p class="forgot-warning">⚠️ <b>Warning:</b> Deleting the folder will <b>erase all your saved repos and people permanently</b>. Make sure you have a backup export first.</p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" id="forgotClose">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- token modal: GitHub personal access token for higher rate limit -->
 <div class="modal-overlay" id="tokenModal">
   <div class="modal">
