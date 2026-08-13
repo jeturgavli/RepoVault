@@ -234,6 +234,7 @@ const server = http.createServer(async (req, res) => {
 
   // CORS preflight
   if (req.method === "OPTIONS") {
+    setSecurityHeaders(res);
     res.writeHead(204, {
       "Access-Control-Allow-Origin": origin || "http://localhost:3000",
       "Access-Control-Allow-Methods": "GET, PUT, POST, DELETE, OPTIONS",
