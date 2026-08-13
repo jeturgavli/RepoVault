@@ -1081,6 +1081,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ── Auth: Login/Register/Logout ───────────────────────
   $("showRegister").onclick = e => { e.preventDefault(); $("loginForm").style.display = "none"; $("registerForm").style.display = ""; $("regError").textContent = ""; };
   $("showLogin").onclick = e => { e.preventDefault(); $("registerForm").style.display = "none"; $("loginForm").style.display = ""; $("loginError").textContent = ""; };
+  // Forgot password modal — open from link, close on button or backdrop click
+  $("showForgot").onclick = e => { e.preventDefault(); $("forgotModal").classList.add("open"); };
+  $("forgotClose").onclick = () => { $("forgotModal").classList.remove("open"); };
+  $("forgotModal").addEventListener("click", e => { if (e.target === $("forgotModal")) $("forgotModal").classList.remove("open"); });
 
   async function doLogin() {
     const u = $("loginUsername").value.trim();
