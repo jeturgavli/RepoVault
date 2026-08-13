@@ -32,8 +32,19 @@ function readBody(req, maxSize = 10 * 1024 * 1024) {
   });
 }
 
+// Security headers for every response (mitigates XSS, clickjacking, etc.)
+function setSecurityHeaders(res) {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("Content-Security-Policy",
+    "default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; " +
+    "script-src 'self' 'unsafe-inline'; connect-src 'self' https://api.github.com");
+}
+
 // JSON response
 function json(res, status, data) {
+  setSecurityHeaders(res);
   res.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
     "Access-Control-Allow-Origin": "http://localhost:3000",
