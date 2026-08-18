@@ -919,6 +919,108 @@ document.addEventListener("DOMContentLoaded", async () => {
     toast("Token removed");
   }
 
+  // ---------- import stars from github ----------
+  async function importStarsFromGitHub() {
+    if (!ghToken) {
+      toast("Add a GitHub token first (🔑 Token button) to import your stars", "error");
+      return;
+    }
+    if (!confirm("Import all your starred repos from GitHub?\n\nThis will fetch your stars and add them to your vault. Already saved repos will be skipped.")) {
+      return;
+    }
+
+    const btn = $("importStarsBtn");
+    btn.disabled = true;
+    btn.textContent = "Fetching stars...";
+
+    let imported = 0, skipped = 0;
+    let page = 1;
+    const perPage = 100;
+    let hasMore = true;
+
+    try {
+      while (hasMore) {
+        btn.textContent = `Fetching page ${page}...`;
+        const res = await ghFetch(`https://api.github.com/user/starred?per_page=${perPage}&page=${page}`);
+
+        if (!res.ok) {
+          if (res.status === 401) {
+            toast("Token is invalid or expired. Please update your token.", "error");
+          } else if (res.status === 403 || res.status === 429) {
+            toast("GitHub rate limit reached. Try again later.", "error");
+          } else {
+            toast("Failed to fetch stars from GitHub", "error");
+          }
+          break;
+        }
+
+        const stars = await res.json();
+        if (!stars.length) {
+          hasMore = false;
+          break;
+        }
+
+        for (let i = 0; i < stars.length; i++) {
+          const s = stars[i];
+          const fullName = s.full_name;
+
+          btn.textContent = `Importing ${imported + skipped + 1} repos...`;
+
+          if (repos.some(r => r.fullName.toLowerCase() === fullName.toLowerCase())) {
+            skipped++;
+            continue;
+          }
+
+          const entry = {
+            fullName: fullName,
+            owner: s.owner.login,
+            name: s.name,
+            url: s.html_url,
+            description: s.description || "",
+            stars: s.stargazers_count,
+            forks: s.forks_count,
+            language: s.language,
+            avatar: s.owner.avatar_url,
+            savedAt: Date.now(),
+            tags: [],
+            note: "",
+            pinned: false
+          };
+
+          repos.unshift(entry);
+          imported++;
+        }
+
+        const linkHeader = res.headers.get("link");
+        if (linkHeader && linkHeader.includes('rel="next"')) {
+          page++;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      if (imported > 0) {
+        persist();
+        render();
+      }
+
+      const parts = [];
+      if (imported) parts.push(`${imported} imported`);
+      if (skipped) parts.push(`${skipped} already saved`);
+      toast(parts.length ? parts.join(" · ") : "No new repos to import", imported ? "success" : "error");
+
+    } catch (err) {
+      if (err.name === "AbortError") {
+        toast("Request timed out. Try again or check your connection.", "error");
+      } else {
+        toast("Failed to import stars. Check your internet connection.", "error");
+      }
+    }
+
+    btn.disabled = false;
+    btn.textContent = "⭐ Import Stars";
+  }
+
   // ---------- export / import ----------
   function exportData() {
     if (!repos.length && !people.length) { toast("Nothing to export", "error"); return; }
@@ -999,6 +1101,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (e.target.files[0]) importData(e.target.files[0]);
     e.target.value = "";
   });
+  $("importStarsBtn").addEventListener("click", importStarsFromGitHub);
 
   // people events
   $("tabRepos").addEventListener("click", () => switchTab("repos"));
