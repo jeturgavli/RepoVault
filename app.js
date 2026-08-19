@@ -1184,6 +1184,24 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ── Auth: Login/Register/Logout ───────────────────────
   $("showRegister").onclick = e => { e.preventDefault(); $("loginForm").style.display = "none"; $("registerForm").style.display = ""; $("regError").textContent = ""; };
   $("showLogin").onclick = e => { e.preventDefault(); $("registerForm").style.display = "none"; $("loginForm").style.display = ""; $("loginError").textContent = ""; };
+
+  // Password visibility toggle
+  document.querySelectorAll(".password-toggle").forEach(btn => {
+    btn.onclick = () => {
+      const targetId = btn.dataset.target;
+      const input = $(targetId);
+      if (input.type === "password") {
+        input.type = "text";
+        btn.textContent = "🙈";
+        btn.title = "Hide password";
+      } else {
+        input.type = "password";
+        btn.textContent = "👁";
+        btn.title = "Show password";
+      }
+    };
+  });
+
   // Forgot password modal — open from link, close on button or backdrop click
   $("showForgot").onclick = e => { e.preventDefault(); $("forgotModal").classList.add("open"); };
   $("forgotClose").onclick = () => { $("forgotModal").classList.remove("open"); };
