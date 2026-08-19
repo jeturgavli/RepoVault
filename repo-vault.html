@@ -25,8 +25,9 @@
       <div class="auth-field">
         <input id="loginUsername" type="text" placeholder="Username" autocomplete="username" maxlength="30">
       </div>
-      <div class="auth-field">
+      <div class="auth-field auth-field-with-toggle">
         <input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password" maxlength="100">
+        <button type="button" class="password-toggle" data-target="loginPassword" title="Show password">👁</button>
       </div>
       <button class="auth-btn" id="loginBtn">Sign In</button>
       <p class="auth-switch">Don't have an account? <a id="showRegister">Register</a></p>
@@ -39,11 +40,13 @@
       <div class="auth-field">
         <input id="regUsername" type="text" placeholder="Choose a username" autocomplete="off" maxlength="30">
       </div>
-      <div class="auth-field">
+      <div class="auth-field auth-field-with-toggle">
         <input id="regPassword" type="password" placeholder="Password (min 8 chars, 1 uppercase, 1 number)" autocomplete="new-password" maxlength="100">
+        <button type="button" class="password-toggle" data-target="regPassword" title="Show password">👁</button>
       </div>
-      <div class="auth-field">
+      <div class="auth-field auth-field-with-toggle">
         <input id="regConfirm" type="password" placeholder="Confirm password" autocomplete="new-password" maxlength="100">
+        <button type="button" class="password-toggle" data-target="regConfirm" title="Show password">👁</button>
       </div>
       <button class="auth-btn" id="registerBtn">Create Account</button>
       <p class="auth-switch">Already have an account? <a id="showLogin">Sign In</a></p>
