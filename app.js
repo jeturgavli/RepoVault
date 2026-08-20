@@ -1212,7 +1212,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const p = $("loginPassword").value;
     if (!u || !p) { $("loginError").textContent = "Please enter username and password"; return; }
     $("loginBtn").disabled = true;
-    $("loginBtn").textContent = "Logging in...";
+    $("loginBtn").innerHTML = '<span class="spinner"></span>Logging in...';
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
@@ -1253,7 +1253,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!/[0-9]/.test(p)) { $("regError").textContent = "Password must contain at least one number"; return; }
     if (p !== c) { $("regError").textContent = "Passwords don't match"; return; }
     $("registerBtn").disabled = true;
-    $("registerBtn").textContent = "Creating account...";
+    $("registerBtn").innerHTML = '<span class="spinner"></span>Creating account...';
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",
