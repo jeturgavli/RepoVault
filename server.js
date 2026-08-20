@@ -474,3 +474,13 @@ server.listen(PORT, "127.0.0.1", () => {
   console.log("");
   console.log("  To stop: press Ctrl+C or close this window");
 });
+
+// Graceful shutdown
+process.on("SIGINT", () => {
+  console.log("\n  Shutting down...");
+  server.close(() => process.exit(0));
+});
+process.on("SIGTERM", () => {
+  console.log("\n  Shutting down...");
+  server.close(() => process.exit(0));
+});
