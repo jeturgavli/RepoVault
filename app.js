@@ -1314,6 +1314,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderPeople();
   };
 
+  // ── Offline / Online detection ───────────────────────
+  window.addEventListener("offline", () => {
+    toast("You are offline — GitHub features disabled", "error");
+  });
+  window.addEventListener("online", () => {
+    toast("Back online ✓");
+  });
+
   // ── Startup: check session or show login ──────────────
   if (useServer && sessionToken) {
     try {
