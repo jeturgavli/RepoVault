@@ -1278,6 +1278,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function doLogout() {
+    if (!confirm("Are you sure you want to log out?")) return;
     if (sessionToken) {
       fetch("/api/auth/logout", {
         method: "POST",
