@@ -30,8 +30,8 @@
         <button type="button" class="password-toggle" data-target="loginPassword" title="Show password">👁</button>
       </div>
       <button class="auth-btn" id="loginBtn">Sign In</button>
-      <p class="auth-switch">Don't have an account? <a id="showRegister">Register</a></p>
-      <p class="auth-switch"><a id="showForgot">Forgot password?</a></p>
+      <p class="auth-switch">Don't have an account? <button type="button" id="showRegister" class="auth-link">Register</button></p>
+      <p class="auth-switch"><button type="button" id="showForgot" class="auth-link">Forgot password?</button></p>
       <p class="auth-error" id="loginError"></p>
     </div>
 
@@ -49,12 +49,12 @@
         <button type="button" class="password-toggle" data-target="regConfirm" title="Show password">👁</button>
       </div>
       <button class="auth-btn" id="registerBtn">Create Account</button>
-      <p class="auth-switch">Already have an account? <a id="showLogin">Sign In</a></p>
+      <p class="auth-switch">Already have an account? <button type="button" id="showLogin" class="auth-link">Sign In</button></p>
       <p class="auth-error" id="regError"></p>
     </div>
 
     <p class="auth-offline">
-      <a id="skipAuth">Continue without server (localStorage mode)</a>
+      <button type="button" id="skipAuth" class="auth-link">Continue without server (localStorage mode)</button>
     </p>
   </div>
 </div>
