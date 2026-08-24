@@ -117,12 +117,12 @@
       <option value="stars">Most stars</option>
       <option value="name">Name (A–Z)</option>
     </select>
-    <button class="tool-btn" id="refreshBtn" title="Re-fetch latest stars & info from GitHub">🔄 Refresh</button>
-    <button class="tool-btn" id="tokenBtn" title="Add a GitHub token to raise the API rate limit">🔑 Token</button>
-    <button class="tool-btn" id="exportBtn" title="Download a backup file">⬇ Export</button>
-    <button class="tool-btn" id="importBtn" title="Restore repos from a backup file">⬆ Import</button>
-    <button class="tool-btn" id="importStarsBtn" title="Import your starred repos from GitHub (requires token)">⭐ Import Stars</button>
-    <button class="logout-btn" id="logoutBtn" style="display:none" title="Sign out">🚪 <span id="logoutLabel">Logout</span></button>
+    <button class="tool-btn" id="refreshBtn" aria-label="Re-fetch latest stars & info from GitHub" title="Re-fetch latest stars & info from GitHub">🔄 Refresh</button>
+    <button class="tool-btn" id="tokenBtn" aria-label="Add GitHub token to raise API rate limit" title="Add a GitHub token to raise the API rate limit">🔑 Token</button>
+    <button class="tool-btn" id="exportBtn" aria-label="Download backup file" title="Download a backup file">⬇ Export</button>
+    <button class="tool-btn" id="importBtn" aria-label="Restore repos from backup file" title="Restore repos from a backup file">⬆ Import</button>
+    <button class="tool-btn" id="importStarsBtn" aria-label="Import starred repositories from GitHub" title="Import your starred repos from GitHub (requires token)">⭐ Import Stars</button>
+    <button class="logout-btn" id="logoutBtn" style="display:none" aria-label="Sign out" title="Sign out">🚪 <span id="logoutLabel">Logout</span></button>
     <input type="file" id="importFile" accept=".json" hidden>
     <span class="count-badge"><b id="repoCount">0</b> repos saved</span>
   </div>
@@ -164,7 +164,7 @@
         <option value="growth">Fastest growing</option>
         <option value="name">Name (A–Z)</option>
       </select>
-      <button class="tool-btn" id="personRefreshBtn" title="Re-fetch latest profile info from GitHub">🔄 Refresh</button>
+      <button class="tool-btn" id="personRefreshBtn" aria-label="Re-fetch latest profile info from GitHub" title="Re-fetch latest profile info from GitHub">🔄 Refresh</button>
       <span class="count-badge"><b id="personCount">0</b> people</span>
     </div>
 
