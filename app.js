@@ -977,6 +977,96 @@ document.addEventListener("DOMContentLoaded", async () => {
   function removeToken() {
     ghToken = "";
     localStorage.removeItem(TOKEN_KEY);
+    closeTokenModal();
+    toast("Token removed — back to 60 requests/hour");
+  }
+
+  // ---------- Account settings modal ----------
+  let settingsModalFocusCleanup = null;
+
+  function openSettingsModal() {
+    $("settingsModalUser").textContent = `Logged in as: ${currentUsername}`;
+    $("settingsCurrentPassword").value = "";
+    $("settingsNewPassword").value = "";
+    $("settingsConfirmPassword").value = "";
+    $("settingsModal").classList.add("open");
+    settingsModalFocusCleanup = trapFocus($("settingsModal"));
+  }
+
+  function closeSettingsModal() {
+    if (settingsModalFocusCleanup) { settingsModalFocusCleanup(); settingsModalFocusCleanup = null; }
+    $("settingsModal").classList.remove("open");
+  }
+
+  async function changePassword() {
+    const current = $("settingsCurrentPassword").value;
+    const newPass = $("settingsNewPassword").value;
+    const confirm = $("settingsConfirmPassword").value;
+
+    if (!current || !newPass || !confirm) {
+      toast("Please fill in all fields", "error");
+      return;
+    }
+    if (newPass !== confirm) {
+      toast("New passwords do not match", "error");
+      return;
+    }
+    if (newPass.length < 8 || !/[A-Z]/.test(newPass) || !/[0-9]/.test(newPass)) {
+      toast("Password must be at least 8 chars, with 1 uppercase and 1 number", "error");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + sessionToken },
+        body: JSON.stringify({ currentPassword: current, newPassword: newPass })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        closeSettingsModal();
+        toast("✓ Password changed successfully");
+      } else {
+        toast(data.error || "Failed to change password", "error");
+      }
+    } catch {
+      toast("Network error — could not change password", "error");
+    }
+  }
+
+  async function deleteAccount() {
+    if (!confirm("⚠️ This will permanently delete your account and ALL saved data (repos, people, token). This cannot be undone. Type 'DELETE' to confirm.")) {
+      return;
+    }
+    const confirmText = prompt("Type DELETE to confirm account deletion:");
+    if (confirmText !== "DELETE") {
+      toast("Deletion cancelled — confirmation text did not match");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/auth/delete-account", {
+        method: "DELETE",
+        headers: { Authorization: "Bearer " + sessionToken }
+      });
+      const data = await res.json();
+      if (data.ok) {
+        closeSettingsModal();
+        sessionToken = "";
+        currentUsername = "";
+        localStorage.removeItem("repovault_session");
+        localStorage.removeItem(TOKEN_KEY);
+        ghToken = "";
+        $("logoutBtn").style.display = "none";
+        showAuth();
+        toast("Account deleted permanently");
+      } else {
+        toast(data.error || "Failed to delete account", "error");
+      }
+    } catch {
+      toast("Network error — could not delete account", "error");
+    }
+  }
     $("tokenInput").value = "";
     closeTokenModal();
     toast("Token removed");
@@ -1165,6 +1255,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     e.target.value = "";
   });
   $("importStarsBtn").addEventListener("click", importStarsFromGitHub);
+  $("settingsBtn").addEventListener("click", openSettingsModal);
+  $("settingsCancel").addEventListener("click", closeSettingsModal);
+  $("settingsChangePassword").addEventListener("click", changePassword);
+  $("settingsDeleteAccount").addEventListener("click", deleteAccount);
+  $("settingsModal").addEventListener("click", e => {
+    if (e.target === $("settingsModal")) closeSettingsModal();
+  });
 
   // people events
   $("tabRepos").addEventListener("click", () => switchTab("repos"));

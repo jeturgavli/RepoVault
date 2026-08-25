@@ -389,6 +389,80 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ── Auth: Change password ─────────────────────────────
+  if (url === "/api/auth/change-password" && req.method === "POST") {
+    const session = getSession(req);
+    if (!session) {
+      return json(res, 401, { ok: false, error: "Please login first" });
+    }
+    try {
+      const body = JSON.parse(await readBody(req, 1024 * 1024));
+      const { currentPassword, newPassword } = body;
+      if (!currentPassword || !newPassword) {
+        return json(res, 400, { ok: false, error: "Both current and new password are required" });
+      }
+      if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+        return json(res, 400, { ok: false, error: "New password must be at least 8 chars, with 1 uppercase and 1 number" });
+      }
+
+      const users = await loadUsers();
+      const userIdx = users.findIndex(u => u.username === session.username);
+      if (userIdx === -1) {
+        return json(res, 404, { ok: false, error: "User not found" });
+      }
+      const user = users[userIdx];
+      const currentHash = hashPassword(currentPassword, user.salt);
+      // Constant-time comparison
+      const derived = Buffer.from(currentHash, "utf8");
+      const stored = Buffer.from(user.passwordHash, "utf8");
+      if (derived.length !== stored.length || !crypto.timingSafeEqual(derived, stored)) {
+        return json(res, 401, { ok: false, error: "Current password is incorrect" });
+      }
+
+      const newSalt = generateSalt();
+      const newEncSalt = generateSalt();
+      const newPasswordHash = hashPassword(newPassword, newSalt);
+      users[userIdx].salt = newSalt;
+      users[userIdx].encSalt = newEncSalt;
+      users[userIdx].passwordHash = newPasswordHash;
+      await saveUsers(users);
+
+      // Update session encryption key with new password
+      const newEncKey = deriveKey(newPassword, newEncSalt);
+      session.key = newEncKey;
+
+      json(res, 200, { ok: true });
+    } catch {
+      json(res, 400, { ok: false, error: "Invalid request" });
+    }
+    return;
+  }
+
+  // ── Auth: Delete account ──────────────────────────────
+  if (url === "/api/auth/delete-account" && req.method === "DELETE") {
+    const session = getSession(req);
+    if (!session) {
+      return json(res, 401, { ok: false, error: "Please login first" });
+    }
+    try {
+      // Delete user data directory
+      const userDir = path.join(DATA_DIR, "users", session.username);
+      if (fs.existsSync(userDir)) {
+        fs.rmSync(userDir, { recursive: true, force: true });
+      }
+      // Remove user from users.json
+      const users = await loadUsers();
+      const filtered = users.filter(u => u.username !== session.username);
+      await saveUsers(filtered);
+      // Remove session
+      sessions.delete(sessionToken);
+      json(res, 200, { ok: true });
+    } catch {
+      json(res, 500, { ok: false, error: "Failed to delete account" });
+    }
+    return;
+  }
+
   // ── Protected Routes Below ────────────────────────────
   const session = getSession(req);
   if (!session) {

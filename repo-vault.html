@@ -122,6 +122,7 @@
     <button class="tool-btn" id="exportBtn" aria-label="Download backup file" title="Download a backup file">⬇ Export</button>
     <button class="tool-btn" id="importBtn" aria-label="Restore repos from backup file" title="Restore repos from a backup file">⬆ Import</button>
     <button class="tool-btn" id="importStarsBtn" aria-label="Import starred repositories from GitHub" title="Import your starred repos from GitHub (requires token)">⭐ Import Stars</button>
+    <button class="tool-btn" id="settingsBtn" aria-label="Account settings" title="Account settings">⚙ Settings</button>
     <button class="logout-btn" id="logoutBtn" style="display:none" aria-label="Sign out" title="Sign out">🚪 <span id="logoutLabel">Logout</span></button>
     <input type="file" id="importFile" accept=".json" hidden>
     <span class="count-badge"><b id="repoCount">0</b> repos saved</span>
@@ -270,6 +271,33 @@
       <button class="btn btn-cancel" id="tokenRemove" style="color:var(--danger);">Remove token</button>
       <button class="btn btn-cancel" id="tokenCancel">Cancel</button>
       <button class="btn btn-save" id="tokenSave">Save token</button>
+    </div>
+  </div>
+</div>
+
+<!-- settings modal: account management -->
+<div class="modal-overlay" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
+  <div class="modal">
+    <h3 id="settingsModalTitle">⚙ Account Settings</h3>
+    <p class="modal-sub" id="settingsModalUser"></p>
+    <div class="field">
+      <label>Current password</label>
+      <input type="password" id="settingsCurrentPassword" placeholder="Enter current password" autocomplete="current-password">
+    </div>
+    <div class="field">
+      <label>New password</label>
+      <input type="password" id="settingsNewPassword" placeholder="New password (min 8 chars, 1 uppercase, 1 number)" autocomplete="new-password">
+    </div>
+    <div class="field">
+      <label>Confirm new password</label>
+      <input type="password" id="settingsConfirmPassword" placeholder="Confirm new password" autocomplete="new-password">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-save" id="settingsChangePassword">Change Password</button>
+      <button class="btn btn-cancel" id="settingsCancel">Cancel</button>
+    </div>
+    <div class="modal-actions danger-zone" style="margin-top:16px; padding-top:16px; border-top:1px solid var(--card-border);">
+      <button class="btn btn-cancel" id="settingsDeleteAccount" style="color:var(--danger); font-weight:600;">Delete Account</button>
     </div>
   </div>
 </div>
