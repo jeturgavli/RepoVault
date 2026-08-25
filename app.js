@@ -19,6 +19,41 @@ document.addEventListener("DOMContentLoaded", async () => {
   function showAuth() { document.getElementById("authOverlay").classList.remove("hidden"); }
   function hideAuth() { document.getElementById("authOverlay").classList.add("hidden"); }
 
+  // ── Focus trap for modals (accessibility) ───────────────────
+  let lastFocusedElement = null;
+
+  function getFocusableElements(modal) {
+    return modal.querySelectorAll(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+  }
+
+  function trapFocus(modal) {
+    const focusable = getFocusableElements(modal);
+    if (!focusable.length) return () => {};
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    function handleTab(e) {
+      if (e.key !== "Tab") return;
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+
+    modal.addEventListener("keydown", handleTab);
+    first.focus();
+    return () => modal.removeEventListener("keydown", handleTab);
+  }
+
   // ── GitHub API helper — adds the personal access token (if saved) to every call.
   // Without a token: 60 requests/hour. With one: 5000/hour.
   let ghToken = localStorage.getItem(TOKEN_KEY) || "";
@@ -400,6 +435,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ---------- edit modal (tags / note / pin) ----------
   let editingRepo = null;
+  let editModalFocusCleanup = null;
 
   function openEditModal(fullName) {
     const r = repos.find(x => x.fullName === fullName);
@@ -410,10 +446,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("editNote").value = r.note || "";
     $("editPin").checked = !!r.pinned;
     $("editModal").classList.add("open");
-    $("editTags").focus();
+    editModalFocusCleanup = trapFocus($("editModal"));
   }
 
   function closeEditModal() {
+    if (editModalFocusCleanup) { editModalFocusCleanup(); editModalFocusCleanup = null; }
     $("editModal").classList.remove("open");
     editingRepo = null;
   }
@@ -729,6 +766,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // ---------- person edit modal (relation / note) ----------
   let editingPerson = null;
+  let personEditModalFocusCleanup = null;
 
   function openPersonEditModal(login) {
     const p = people.find(x => x.login === login);
@@ -738,9 +776,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("personEditRelation").value = p.relation || "friend";
     $("personEditNote").value = p.note || "";
     $("personEditModal").classList.add("open");
+    personEditModalFocusCleanup = trapFocus($("personEditModal"));
   }
 
   function closePersonEditModal() {
+    if (personEditModalFocusCleanup) { personEditModalFocusCleanup(); personEditModalFocusCleanup = null; }
     $("personEditModal").classList.remove("open");
     editingPerson = null;
   }
@@ -872,10 +912,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("peopleSection").classList.toggle("active", !isRepos);
   }
 
+  let tokenModalFocusCleanup = null;
+
   // ---------- GitHub token modal ----------
   async function openTokenModal() {
     $("tokenInput").value = ghToken;
     $("tokenModal").classList.add("open");
+    tokenModalFocusCleanup = trapFocus($("tokenModal"));
     // show current rate limit status
     const status = $("tokenStatus");
     status.textContent = "Checking your current rate limit...";
@@ -892,7 +935,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  function closeTokenModal() { $("tokenModal").classList.remove("open"); }
+  function closeTokenModal() {
+    if (tokenModalFocusCleanup) { tokenModalFocusCleanup(); tokenModalFocusCleanup = null; }
+    $("tokenModal").classList.remove("open");
+  }
 
   async function saveToken() {
     const t = $("tokenInput").value.trim();
@@ -1203,9 +1249,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   // Forgot password modal — open from link, close on button or backdrop click
-  $("showForgot").onclick = e => { e.preventDefault(); $("forgotModal").classList.add("open"); };
-  $("forgotClose").onclick = () => { $("forgotModal").classList.remove("open"); };
-  $("forgotModal").addEventListener("click", e => { if (e.target === $("forgotModal")) $("forgotModal").classList.remove("open"); });
+  let forgotModalFocusCleanup = null;
+  $("showForgot").onclick = e => { e.preventDefault(); $("forgotModal").classList.add("open"); forgotModalFocusCleanup = trapFocus($("forgotModal")); };
+  $("forgotClose").onclick = () => { if (forgotModalFocusCleanup) { forgotModalFocusCleanup(); forgotModalFocusCleanup = null; } $("forgotModal").classList.remove("open"); };
+  $("forgotModal").addEventListener("click", e => { if (e.target === $("forgotModal")) { if (forgotModalFocusCleanup) { forgotModalFocusCleanup(); forgotModalFocusCleanup = null; } $("forgotModal").classList.remove("open"); } });
 
   async function doLogin() {
     const u = $("loginUsername").value.trim();

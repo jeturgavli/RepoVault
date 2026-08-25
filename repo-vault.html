@@ -176,7 +176,7 @@
 <div id="toast" aria-live="polite" role="status"><span class="dot"></span><span id="toastMsg"></span></div>
 
 <!-- edit modal: tags, note, pin -->
-<div class="modal-overlay" id="editModal">
+<div class="modal-overlay" id="editModal" role="dialog" aria-modal="true" aria-labelledby="editModalRepo">
   <div class="modal">
     <h3>✏️ Edit repo</h3>
     <p class="modal-sub" id="editModalRepo"></p>
@@ -203,7 +203,7 @@
 </div>
 
 <!-- person edit modal: relation, note -->
-<div class="modal-overlay" id="personEditModal">
+<div class="modal-overlay" id="personEditModal" role="dialog" aria-modal="true" aria-labelledby="personEditModalName">
   <div class="modal">
     <h3>✏️ Edit person</h3>
     <p class="modal-sub" id="personEditModalName"></p>
@@ -228,9 +228,9 @@
 </div>
 
 <!-- forgot password modal: explains that password reset requires manual data wipe -->
-<div class="modal-overlay" id="forgotModal">
+<div class="modal-overlay" id="forgotModal" role="dialog" aria-modal="true" aria-labelledby="forgotModalTitle">
   <div class="modal">
-    <h3>🔒 Forgot password?</h3>
+    <h3 id="forgotModalTitle">🔒 Forgot password?</h3>
     <p class="modal-sub">RepoVault stores your password as a one-way hash on your own machine — <b>no one can recover it for you</b> (not even from the server).</p>
     <div class="field">
       <p class="forgot-intro">To reset your password, you have two options:</p>
@@ -253,9 +253,9 @@
 </div>
 
 <!-- token modal: GitHub personal access token for higher rate limit -->
-<div class="modal-overlay" id="tokenModal">
+<div class="modal-overlay" id="tokenModal" role="dialog" aria-modal="true" aria-labelledby="tokenModalTitle">
   <div class="modal">
-    <h3>🔑 GitHub Token</h3>
+    <h3 id="tokenModalTitle">🔑 GitHub Token</h3>
     <p class="modal-sub">Without a token GitHub allows only <b>60 requests/hour</b>. With a free token you get <b>5000/hour</b> — no more "rate limit" errors.</p>
     <div class="field">
       <label>Personal access token</label>
