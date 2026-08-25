@@ -475,6 +475,19 @@ server.listen(PORT, "127.0.0.1", () => {
   console.log("  To stop: press Ctrl+C or close this window");
 });
 
+// Handle EADDRINUSE error (port already in use)
+server.on("error", (err) => {
+  if (err.code === "EADDRINUSE") {
+    console.error("");
+    console.error(`  ✦ Port ${PORT} is already in use!`);
+    console.error(`  ✦ Close the other instance or change PORT in server.js`);
+    console.error("");
+  } else {
+    console.error("  ✦ Server error:", err);
+  }
+  process.exit(1);
+});
+
 // Graceful shutdown
 process.on("SIGINT", () => {
   console.log("\n  Shutting down...");
