@@ -76,17 +76,17 @@
     <p class="tagline">Save your favorite GitHub repos in one place ✨</p>
   </header>
 
-  <div class="tabs">
-    <button class="tab-btn active" id="tabRepos" data-tab="repos">
+  <div class="tabs" role="tablist">
+    <button class="tab-btn active" id="tabRepos" data-tab="repos" role="tab" aria-selected="true" aria-controls="reposSection">
       📦 Repos <span class="tab-count" id="tabRepoCount">0</span>
     </button>
-    <button class="tab-btn" id="tabPeople" data-tab="people">
+    <button class="tab-btn" id="tabPeople" data-tab="people" role="tab" aria-selected="false" aria-controls="peopleSection">
       👤 People <span class="tab-count" id="tabPeopleCount">0</span>
     </button>
   </div>
 
   <!-- ================= REPOS SECTION ================= -->
-  <div class="section active" id="reposSection">
+  <div class="section active" id="reposSection" role="tabpanel" aria-labelledby="tabRepos">
 
   <div class="add-bar">
     <div class="input-wrap">
@@ -132,7 +132,7 @@
   </div><!-- /reposSection -->
 
   <!-- ================= PEOPLE SECTION ================= -->
-  <div class="section" id="peopleSection">
+  <div class="section" id="peopleSection" role="tabpanel" aria-labelledby="tabPeople">
 
     <div class="add-bar">
       <div class="input-wrap">

@@ -910,7 +910,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("tabPeople").classList.toggle("active", !isRepos);
     $("reposSection").classList.toggle("active", isRepos);
     $("peopleSection").classList.toggle("active", !isRepos);
+    // Update ARIA attributes
+    $("tabRepos").setAttribute("aria-selected", isRepos);
+    $("tabPeople").setAttribute("aria-selected", !isRepos);
   }
+
+  // Arrow-key navigation for tabs
+  document.querySelectorAll('[role="tab"]').forEach(tab => {
+    tab.addEventListener("keydown", e => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      e.preventDefault();
+      const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
+      const idx = tabs.indexOf(tab);
+      const nextIdx = e.key === "ArrowRight" ? (idx + 1) % tabs.length : (idx - 1 + tabs.length) % tabs.length;
+      tabs[nextIdx].focus();
+      // Switch to the focused tab
+      switchTab(tabs[nextIdx].dataset.tab);
+    });
+  });
 
   let tokenModalFocusCleanup = null;
 
