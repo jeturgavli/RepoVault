@@ -2,6 +2,7 @@
 // To run: node server.js  (or double-click start.bat)
 const http = require("http");
 const fs = require("fs");
+const fsPromises = fs.promises;
 const path = require("path");
 const crypto = require("crypto");
 
@@ -97,13 +98,17 @@ function generateToken() {
 }
 
 // ── Users Database ──────────────────────────────────────
-function loadUsers() {
-  if (!fs.existsSync(USERS_FILE)) return [];
-  return JSON.parse(fs.readFileSync(USERS_FILE, "utf8"));
+async function loadUsers() {
+  try {
+    const data = await fsPromises.readFile(USERS_FILE, "utf8");
+    return JSON.parse(data);
+  } catch {
+    return [];
+  }
 }
 
-function saveUsers(users) {
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), "utf8");
+async function saveUsers(users) {
+  await fsPromises.writeFile(USERS_FILE, JSON.stringify(users, null, 2), "utf8");
 }
 
 // ── Per-User Encrypted Data ─────────────────────────────
@@ -117,35 +122,45 @@ function getUserFile(username, filename) {
   return path.join(getUserDataDir(username), filename);
 }
 
-function readEncryptedFile(filePath, encryptionKey) {
-  if (!fs.existsSync(filePath)) return [];
-  const raw = fs.readFileSync(filePath, "utf8");
-  if (!raw.trim()) return [];
-  const decrypted = decrypt(raw, encryptionKey);
-  return JSON.parse(decrypted);
+async function readEncryptedFile(filePath, encryptionKey) {
+  try {
+    const raw = await fsPromises.readFile(filePath, "utf8");
+    if (!raw.trim()) return [];
+    const decrypted = decrypt(raw, encryptionKey);
+    return JSON.parse(decrypted);
+  } catch {
+    return [];
+  }
 }
 
-function restoreFromBackup(filePath, encryptionKey) {
+async function restoreFromBackup(filePath, encryptionKey) {
   const backupPath = filePath + ".backup";
-  if (!fs.existsSync(backupPath)) throw new Error("No backup file found");
-  const raw = fs.readFileSync(backupPath, "utf8");
-  if (!raw.trim()) throw new Error("Backup file is empty");
-  const decrypted = decrypt(raw, encryptionKey);
-  const data = JSON.parse(decrypted);
-  // Restore: copy backup over the main file
-  fs.copyFileSync(backupPath, filePath);
-  return data;
+  try {
+    const raw = await fsPromises.readFile(backupPath, "utf8");
+    if (!raw.trim()) throw new Error("Backup file is empty");
+    const decrypted = decrypt(raw, encryptionKey);
+    const data = JSON.parse(decrypted);
+    // Restore: copy backup over the main file
+    await fsPromises.copyFile(backupPath, filePath);
+    return data;
+  } catch {
+    throw new Error("No backup file found");
+  }
 }
 
-function writeEncryptedFile(filePath, data, encryptionKey) {
+async function writeEncryptedFile(filePath, data, encryptionKey) {
   // Backup before writing
-  if (fs.existsSync(filePath)) {
-    const backupPath = filePath + ".backup";
-    fs.copyFileSync(filePath, backupPath);
+  try {
+    if (fs.existsSync(filePath)) {
+      const backupPath = filePath + ".backup";
+      await fsPromises.copyFile(filePath, backupPath);
+    }
+  } catch {
+    // Ignore backup errors
   }
   const jsonStr = JSON.stringify(data, null, 2);
   const encrypted = encrypt(jsonStr, encryptionKey);
-  fs.writeFileSync(filePath, encrypted, "utf8");
+  await fsPromises.writeFile(filePath, encrypted, "utf8");
 }
 
 // ── Session Store ───────────────────────────────────────
@@ -293,7 +308,7 @@ const server = http.createServer(async (req, res) => {
         return json(res, 400, { ok: false, error: "Username can only contain letters, numbers, underscores, dashes" });
       }
 
-      const users = loadUsers();
+      const users = await loadUsers();
       if (users.find(u => u.username === username)) {
         return json(res, 409, { ok: false, error: "This username is already taken" });
       }
@@ -302,7 +317,7 @@ const server = http.createServer(async (req, res) => {
       const encSalt = generateSalt(); // separate salt for encryption key (not shared with auth hash)
       const passwordHash = hashPassword(password, salt);
       users.push({ username, salt, encSalt, passwordHash, createdAt: new Date().toISOString() });
-      saveUsers(users);
+      await saveUsers(users);
 
       // Create user data folder
       getUserDataDir(username);
@@ -328,7 +343,7 @@ const server = http.createServer(async (req, res) => {
         return json(res, 400, { ok: false, error: "Username and password are required" });
       }
 
-      const users = loadUsers();
+      const users = await loadUsers();
       const user = users.find(u => u.username === username);
       if (!user) {
         return json(res, 401, { ok: false, error: "Invalid username or password" });
@@ -386,7 +401,7 @@ const server = http.createServer(async (req, res) => {
   // ── GET /api/repos ────────────────────────────────────
   if (url === "/api/repos" && req.method === "GET") {
     try {
-      const data = readEncryptedFile(reposFile, session.key);
+      const data = await readEncryptedFile(reposFile, session.key);
       json(res, 200, data);
     } catch {
       json(res, 500, { ok: false, error: "Data file is corrupted or unreadable", corrupted: true });
@@ -397,7 +412,7 @@ const server = http.createServer(async (req, res) => {
   // ── POST /api/repos/restore ───────────────────────────
   if (url === "/api/repos/restore" && req.method === "POST") {
     try {
-      const data = restoreFromBackup(reposFile, session.key);
+      const data = await restoreFromBackup(reposFile, session.key);
       json(res, 200, { ok: true, data });
     } catch (e) {
       json(res, 500, { ok: false, error: e.message });
@@ -413,7 +428,7 @@ const server = http.createServer(async (req, res) => {
       if (!Array.isArray(data) || data.length > MAX_ITEMS) {
         return json(res, 400, { ok: false, error: `Maximum ${MAX_ITEMS} items allowed` });
       }
-      writeEncryptedFile(reposFile, data, session.key);
+      await writeEncryptedFile(reposFile, data, session.key);
       json(res, 200, { ok: true });
     } catch {
       json(res, 400, { ok: false });
@@ -424,7 +439,7 @@ const server = http.createServer(async (req, res) => {
   // ── GET /api/people ───────────────────────────────────
   if (url === "/api/people" && req.method === "GET") {
     try {
-      const data = readEncryptedFile(peopleFile, session.key);
+      const data = await readEncryptedFile(peopleFile, session.key);
       json(res, 200, data);
     } catch {
       json(res, 500, { ok: false, error: "Data file is corrupted or unreadable", corrupted: true });
@@ -435,7 +450,7 @@ const server = http.createServer(async (req, res) => {
   // ── POST /api/people/restore ──────────────────────────
   if (url === "/api/people/restore" && req.method === "POST") {
     try {
-      const data = restoreFromBackup(peopleFile, session.key);
+      const data = await restoreFromBackup(peopleFile, session.key);
       json(res, 200, { ok: true, data });
     } catch (e) {
       json(res, 500, { ok: false, error: e.message });
@@ -451,7 +466,7 @@ const server = http.createServer(async (req, res) => {
       if (!Array.isArray(data) || data.length > MAX_ITEMS) {
         return json(res, 400, { ok: false, error: `Maximum ${MAX_ITEMS} items allowed` });
       }
-      writeEncryptedFile(peopleFile, data, session.key);
+      await writeEncryptedFile(peopleFile, data, session.key);
       json(res, 200, { ok: true });
     } catch {
       json(res, 400, { ok: false });
