@@ -1067,9 +1067,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       toast("Network error — could not delete account", "error");
     }
   }
-    $("tokenInput").value = "";
+
+  function removeToken() {
+    ghToken = "";
+    localStorage.removeItem(TOKEN_KEY);
     closeTokenModal();
-    toast("Token removed");
+    toast("Token removed — back to 60 requests/hour");
   }
 
   // ---------- import stars from github ----------
